@@ -1,0 +1,244 @@
+#include "uart.h"
+#if defined(TEST)
+# include <stdio.h>
+# include <stdlib.h>
+# include <fcntl.h>
+# include <termios.h>
+# include <signal.h>
+# include <time.h>
+#else // defined(TEST)
+# include <avr/io.h>
+# include <avr/interrupt.h>
+#endif // defined(TEST)
+
+#if defined(TEST)
+struct termios org_to;
+int org_flags;
+int fifo_flag;
+int wait_flag;
+#else // if defined(TEST)
+extern unsigned short uart_tx(unsigned char);
+extern unsigned char uart_rx(void);
+
+static void
+reset_int
+(void)
+{
+  PCIFR |= _BV(PCIF1);	// Reset PCINT1 Flag
+}
+
+static void
+enable_int
+(void)
+{
+  PCICR |= _BV(PCIE1);	// Enable PCINT1
+}
+
+static void
+disable_int
+(void)
+{
+  PCICR &= ~_BV(PCIE1);	// Disable PCINT1
+}
+
+static unsigned char
+fifo[8];
+
+static unsigned char
+fifo_rdptr = 0;
+
+static unsigned char
+fifo_wrptr = 0;
+
+#endif // defined(TEST)
+
+static void
+put_halfhex
+(unsigned char c)
+{
+  if (c < 10) uart_putchar('0' + c);
+  else uart_putchar('A' - 10 + c);
+}
+
+#if !defined(TEST)
+static void
+uart_push
+(unsigned char c)
+{
+  if (fifo_rdptr != (fifo_wrptr + 1)) {
+    fifo[fifo_wrptr++] = c;
+    fifo_wrptr &= 7;
+  }
+}
+
+static void
+uart_int
+(void)
+{
+  disable_int();
+  uart_push(uart_rx());
+  reset_int();
+  enable_int();
+}
+
+ISR
+(PCINT1_vect)
+{
+  uart_int();
+}
+#endif // !defined(TEST)
+
+#if defined(TEST)
+void
+uart_term
+(int num)
+{
+  tcsetattr(0, 0, &org_to);
+  fcntl(0, F_SETFL, org_flags);
+  exit(0);
+}
+#endif // defined(TEST)
+
+void
+uart_init
+(void)
+{
+#if defined(TEST)
+  tcgetattr(0, &org_to);
+  org_flags = fcntl(0, F_GETFL, 0);
+  signal(SIGTERM, uart_term);
+
+  struct termios to;
+  tcgetattr(0, &to);
+  to.c_iflag &= ~(ICRNL);
+  to.c_lflag &= ~(ECHO | ICANON);
+  int flags = org_flags | O_NDELAY;
+
+  tcsetattr(0, TCSANOW, &to);
+  fcntl(0, F_SETFL, flags);
+
+  fifo_flag = -1;
+  wait_flag = -1;
+#else // defined(TEST)
+  /*
+   * PC0: RXD
+   * PC1: TXD
+   */
+  // Port Settings
+  DDRC   &= ~_BV(DDC0);		// PC0: Input
+  PORTC  |=  _BV(DDC0);		//      Pull-up
+  DDRC   |=  _BV(DDC1);		// PC1: Output
+
+  PCMSK1 |=  _BV(PCINT8);	// PC0 cause PCINT1
+
+  SREG   |=  _BV(SREG_I);	// Enable Interrupt
+
+  enable_int();
+#endif // defined(TEST)
+}
+
+void
+uart_putchar
+(unsigned char c)
+{
+#if defined(TEST)
+  fputc((int)c, stdout);
+  fflush(stdout);
+  wait_flag = -1;
+#else // defined(TEST)
+  disable_int();
+  unsigned short rc = uart_tx(c);
+  if (0 != rc) uart_push(rc);
+  reset_int();
+  enable_int();
+  if (0 == (PINC & _BV(DDC0))) uart_int();
+#endif // defined(TEST)
+}
+
+void
+uart_puthex
+(unsigned char c)
+{
+  put_halfhex(c >> 4);
+  put_halfhex(c & 15);
+}
+
+void
+uart_putnum_u16
+(unsigned short n, int digit)
+{
+  unsigned short d = 10000;
+  if (digit > 0) {
+    d = 1;
+    for (digit--; digit > 0; digit--) d *= 10;
+  }
+  do {
+    int num = n / d;
+    n = n % d;
+    d /= 10;
+    uart_putchar('0' + num);
+  } while (0 != d);
+}
+
+void
+uart_puts
+(char *s)
+{
+  while (0 != *s) uart_putchar(*s++);
+}
+
+void
+uart_putsln
+(char *s)
+{
+  uart_puts(s);
+  uart_puts("\r\n");
+}
+
+int
+uart_getchar
+(void)
+{
+#if defined(TEST)
+  wait_flag = -1;
+  if (-1 == fifo_flag) uart_peek();
+  wait_flag = -1;
+  if (-1 != fifo_flag) {
+    int rc = fifo_flag;
+    fifo_flag = -1;
+    return rc;
+  }
+  struct timespec req;
+  struct timespec rem;
+  req.tv_sec = 0;
+  req.tv_nsec = 1000 * 1000 * 10; // 10msec
+  nanosleep(&req, &rem);
+  return -1;
+#else // defined(TEST)
+  if (fifo_rdptr == fifo_wrptr) return -1;
+  int rc = fifo[fifo_rdptr++];
+  fifo_rdptr &= 7;
+  return rc;
+#endif // defined(TEST)
+}
+
+int
+uart_peek
+(void)
+{
+#if defined(TEST)
+  if (-1 != wait_flag) {
+    struct timespec req;
+    struct timespec rem;
+    req.tv_sec = 0;
+    req.tv_nsec = 1000 * 1000 * 10; // 10msec
+    nanosleep(&req, &rem);
+  }
+  wait_flag = 0;
+  fifo_flag = fgetc(stdin);
+  if (-1 != fifo_flag) return 1;
+  return 0;
+#else // defined(TEST)
+  return (fifo_wrptr - fifo_rdptr) & 7;
+#endif // defined(TEST)
+}

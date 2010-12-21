@@ -1,0 +1,31 @@
+CC	= gcc
+SIZE	= avr-size
+HIDSPX	= hidspx
+MCU	= atmega88
+CFLAGS	= -O0 -Wall -DTEST
+LIBS	=
+LDFLAGS	=
+SFLAGS	=
+HFLAGS	= -d2
+TARGET	= cpmega88
+OBJS	= main.o uart.o sram.o sdcard.o fat.o eeprom.o cpu_8080.o
+
+all: $(TARGET)
+
+%.o: %.c
+	$(CC) -c $(CFLAGS) -o $@ $<
+
+%.o: %.s
+	$(CC) -c -o $@ $<
+
+%.o: %.S
+	$(CC) -c -o $@ $<
+
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+clean:
+	rm -rf *.o *.hex *.elf $(TARGET)
+
+fat:
+	gcc -o fat_test fat_test.c fat.c
