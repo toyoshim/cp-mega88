@@ -46,5 +46,3 @@ $(TARGET): $(OBJS)
 clean:
 	rm -rf *.o *.hex *.elf
 
-fat:
-	gcc -o fat_test fat_test.c fat.c
