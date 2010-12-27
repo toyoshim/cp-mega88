@@ -567,8 +567,8 @@ prompt
   uart_putsln("monitor commands");
   uart_putsln(" r                : reset");
   uart_putsln(" b                : boot CP/M 2.2");
-  uart_putsln(" wp               : file system write protection");
-  uart_putsln(" a                : auto boot");
+  uart_putsln(" wp <on/off>      : file system write protection");
+  uart_putsln(" a <on/off>       : auto boot");
 #  if defined(MON_MEM)
   uart_putsln(" mr <addr>        : memory read from <addr>");
   uart_putsln(" mw <addr>,<data> : memory write <data> to <addr>");
