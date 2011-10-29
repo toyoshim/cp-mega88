@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Takashi TOYOSHIMA <toyoshim@gmail.com>
+ * Copyright (c) 2011, Takashi TOYOSHIMA <toyoshim@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,10 +31,15 @@
 
 #include "uart.h"
 #if defined(TEST)
+# if defined(__native_client__)
+#  include "native_client/nacl_main.h"
+# endif // defined(__native_client__)
 # include <stdio.h>
 # include <stdlib.h>
 # include <fcntl.h>
-# include <termios.h>
+# if !defined(__native_client__)
+#  include <termios.h>
+# endif // !defined(__native_client__)
 # include <signal.h>
 # include <time.h>
 #else // defined(TEST)
@@ -43,7 +48,9 @@
 #endif // defined(TEST)
 
 #if defined(TEST)
+# if !defined(__native_client__)
 struct termios org_to;
+# endif // !defined(__native_client__)
 int org_flags;
 int fifo_flag;
 int wait_flag;
@@ -124,8 +131,10 @@ void
 uart_term
 (int num)
 {
+# if !defined(__native_client__)
   tcsetattr(0, 0, &org_to);
   fcntl(0, F_SETFL, org_flags);
+# endif // !defined(__native_client__)
   exit(0);
 }
 #endif // defined(TEST)
@@ -135,6 +144,7 @@ uart_init
 (void)
 {
 #if defined(TEST)
+# if !defined(__native_client__)
   tcgetattr(0, &org_to);
   org_flags = fcntl(0, F_GETFL, 0);
   signal(SIGTERM, uart_term);
@@ -147,6 +157,7 @@ uart_init
 
   tcsetattr(0, TCSANOW, &to);
   fcntl(0, F_SETFL, flags);
+# endif // !defined(__native_client__)
 
   fifo_flag = -1;
   wait_flag = -1;
@@ -173,8 +184,12 @@ uart_putchar
 (unsigned char c)
 {
 #if defined(TEST)
+# if defined(__native_client__)
+  nacl_putc(c);
+# else // defined(__native_client__)
   fputc((int)c, stdout);
   fflush(stdout);
+# endif // defined(__native_client__)
   wait_flag = -1;
 #else // defined(TEST)
   disable_int();
@@ -215,7 +230,12 @@ void
 uart_puts
 (char *s)
 {
+#if defined(__native_client__)
+  nacl_puts(s);
+  wait_flag = -1;
+#else // defined(__native_client__)
   while (0 != *s) uart_putchar(*s++);
+#endif // defined(__native_client__)
 }
 
 void
@@ -239,11 +259,15 @@ uart_getchar
     fifo_flag = -1;
     return rc;
   }
+# if !defined(__native_client__)
   struct timespec req;
   struct timespec rem;
   req.tv_sec = 0;
   req.tv_nsec = 1000 * 1000 * 10; // 10msec
   nanosleep(&req, &rem);
+# else // !defined(__native_client__)
+  nacl_sleep();
+# endif // !defined(__native_client__)
   return -1;
 #else // defined(TEST)
   if (fifo_rdptr == fifo_wrptr) return -1;
@@ -258,6 +282,7 @@ uart_peek
 (void)
 {
 #if defined(TEST)
+# if !defined(__native_client__)
   if (-1 != wait_flag) {
     struct timespec req;
     struct timespec rem;
@@ -265,8 +290,15 @@ uart_peek
     req.tv_nsec = 1000 * 1000 * 10; // 10msec
     nanosleep(&req, &rem);
   }
+# else // !defined(__native_client__)
+  nacl_sleep();
+# endif // !defined(__native_client__)
   wait_flag = 0;
+# if defined(__native_client__)
+  fifo_flag = nacl_getc();
+# else // defined(__native_client__)
   fifo_flag = fgetc(stdin);
+# endif // defined(__native_client__)
   if (-1 != fifo_flag) return 1;
   return 0;
 #else // defined(TEST)

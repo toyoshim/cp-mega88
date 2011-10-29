@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CP/Mega88 on NaCl</title>
+
+  <script type="text/javascript" src="http://terminal-js.googlecode.com/git/term.js"></script>
+  <script type="text/javascript">
+    CpMega88Module = null;
+    Terminal = null;
+    var didLoad = false;
+    var log = "";
+
+    function moduleDidLoad() {
+      if (Terminal)
+        Terminal.appendString("OK\n\n" + log);
+      didLoad = true;
+    }
+
+    function handleMessage(message_event) {
+      if (Terminal && didLoad)
+        Terminal.appendString(message_event.data);
+      else
+        log += message_event.data;
+    }
+
+  </script>
+</head>
+<body>
+
+<h1>Native Client Module CP/Mega88</h1>
+<p>
+  <div id="listener">
+    <pre id="term"
+	 style="background-color: black;
+		color: green;
+		display: inline-block;"></pre>
+    <script type="text/javascript">
+      Terminal = new Term("term", 80, 25);
+      Terminal.appendString("Loading NaCl module...");
+      document.onkeypress = function (e) {
+        document.getElementById('cpmega88').postMessage(
+            String.fromCharCode(e.which));
+      }
+      document.onkeydown = function (e) {
+        if (8 == e.which) {
+          document.getElementById('cpmega88').postMessage(
+              String.fromCharCode(e.which));
+          return false;
+        }
+        return true;
+      }
+      document.onkeyup = function (e) {
+        return false;
+      }
+      var listener = document.getElementById('listener');
+      listener.addEventListener('load', moduleDidLoad, true);
+      listener.addEventListener('message', handleMessage, true);
+    </script>
+
+    <embed name="nacl_module"
+       id="cpmega88"
+       width=0 height=0
+       src="cpmega88.nmf"
+       type="application/x-nacl" />
+  </div>
+</p>
+</body>
+</html>

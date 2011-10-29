@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Takashi TOYOSHIMA <toyoshim@gmail.com>
+ * Copyright (c) 2011, Takashi TOYOSHIMA <toyoshim@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -799,8 +799,13 @@ in
 }
 
 int
+#if defined(__native_client__)
+nacl_main
+(void)
+#else // defined(__native_client__)
 main
 (int argc, char **argv)
+#endif // defined(__native_client__)
 {
 #if defined(TEST)
   setjmp(jb);
