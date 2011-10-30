@@ -844,9 +844,9 @@ main
     sd_fat = 1;
   } else {
 #if !defined(MSG_MIN)
-    uart_puts("FAT: error(");
+    uart_puts("FAT: ");
     uart_puthex(-rc);
-    uart_putsln(")");
+    uart_putsln("");
 #endif // !defined(MSG_MIN);
   }
 #endif // defined(USE_FAT)
@@ -866,7 +866,7 @@ main
     if (0x88 == eeprom_read(16)) {
       char buf[8 + 1 + 3 + 1];
       eeprom_read_string(17, buf);
-      mount(buf);
+      if (0 != sd_fat) mount(buf);
     }
     if (0x88 == eeprom_read(8)) boot();
   }
