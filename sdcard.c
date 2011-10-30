@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Takashi TOYOSHIMA <toyoshim@gmail.com>
+ * Copyright (c) 2011, Takashi TOYOSHIMA <toyoshim@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -146,6 +146,7 @@ sdcard_open
 {
 #if defined(TEST)
   fp = fopen("sdcard.img", "r+");
+  if (NULL == fp) fp = fopen("sdcard.img", "r");
   if (NULL == fp) return -1;
   return 0;
 #else // defined(TEST)
