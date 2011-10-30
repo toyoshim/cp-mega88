@@ -32,11 +32,14 @@
 CC	= x86_64-nacl-gcc
 CXX	= x86_64-nacl-g++
 CFLAGS	= -O0 -g -Wall -m64 -pthread -DTEST
-LIBS	= -lppapi
-LDFLAGS	=
+LIBS	= -lppapi -lppapi_cpp
+LDFLAGS	= -Xlinker --wrap -Xlinker open \
+	  -Xlinker --wrap -Xlinker read \
+	  -Xlinker --wrap -Xlinker write \
+	  -Xlinker --wrap -Xlinker lseek
 TARGET	= native_client/cpmega88_x86_64.nexe
 OBJS	= main.o uart.o sram.o sdcard.o fat.o eeprom.o cpu_8080.o \
-	native_client/nacl_main.o
+	native_client/nacl_main.o native_client/wrap.o
 
 all: $(TARGET)
 
@@ -53,4 +56,4 @@ $(TARGET): $(OBJS)
 	$(CXX) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 clean:
-	rm -rf *.o *.hex *.elf $(TARGET)
+	rm -rf *.o *.hex *.elf native_client/*.o $(TARGET)

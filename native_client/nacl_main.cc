@@ -44,13 +44,16 @@
 #include "ppapi/cpp/module.h"
 #include "ppapi/cpp/var.h"
 
+#include "wrap.h"
+
 extern "C" int nacl_main(void);
 
 class CpMega88Instance : public pp::Instance {
 public:
   explicit CpMega88Instance(PP_Instance instance) : pp::Instance(instance)
   {
-    PostMessage(pp::Var("Booting CP/Mega88 on NaCl\n"));
+    file_init = false;
+    wrap_init(this, pp::CompletionCallback(FsOpen, this));
   }
   virtual ~CpMega88Instance() {
     if (thread_init) {
@@ -58,9 +61,15 @@ public:
       pthread_mutex_destroy(&thread_buffer_mutex);
       pthread_mutex_destroy(&thread_block_mutex);
     }
+    wrap_trash();
   }
 
-  bool Init(uint32_t argc, const char* argn[], const char* argv[]) {
+  bool Boot() {
+    PostMessage(pp::Var("Booting CP/Mega88 on NaCl\n"));
+    if (!file_init) {
+      PostMessage(pp::Var("FileSystem API initialization error\n"));
+      return false;
+    }
     PostMessage(pp::Var("  Setting up timer: "));
     core = pp::Module::Get()->core();
     Log("OK\n");
@@ -109,9 +118,17 @@ public:
     if (!var_message.is_string())
       return;
     std::string message = var_message.AsString();
-    pthread_mutex_lock(&thread_buffer_mutex);
-    in.push(message.c_str()[0]);
-    pthread_mutex_unlock(&thread_buffer_mutex);
+    const char *str = message.c_str();
+    switch (str[0]) {
+      case 'B': // Boot
+        Boot();
+        break;
+      case 'C': // Console input
+        pthread_mutex_lock(&thread_buffer_mutex);
+        in.push(str[1]);
+        pthread_mutex_unlock(&thread_buffer_mutex);
+        break;
+    }
   }
 
   void Log(const char* log) {
@@ -161,6 +178,11 @@ public:
     self->SetupTimer();
   }
 
+  static void FsOpen(void* param, int32_t result) {
+    CpMega88Instance* self = static_cast<CpMega88Instance*>(param);
+    self->file_init = true;
+  }
+
 private:
   pthread_t thread_main;
   bool thread_init;
@@ -168,6 +190,7 @@ private:
   pthread_mutex_t thread_block_mutex;
   volatile bool thread_block;
   pp::Core *core;
+  bool file_init;
   std::stringstream out;
   std::queue<uint8_t> in;
 };
