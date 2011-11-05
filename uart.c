@@ -133,8 +133,8 @@ uart_term
 {
 # if !defined(__native_client__)
   tcsetattr(0, 0, &org_to);
-  fcntl(0, F_SETFL, org_flags);
 # endif // !defined(__native_client__)
+  fcntl(0, F_SETFL, org_flags);
   exit(0);
 }
 #endif // defined(TEST)
@@ -146,18 +146,22 @@ uart_init
 #if defined(TEST)
 # if !defined(__native_client__)
   tcgetattr(0, &org_to);
+# endif // !defined(__native_client__)
   org_flags = fcntl(0, F_GETFL, 0);
+# if !defined(__native_client__)
   signal(SIGTERM, uart_term);
 
   struct termios to;
   tcgetattr(0, &to);
   to.c_iflag &= ~(ICRNL);
   to.c_lflag &= ~(ECHO | ICANON);
+# endif // !defined(__native_client__)
   int flags = org_flags | O_NDELAY;
 
+# if !defined(__native_client__)
   tcsetattr(0, TCSANOW, &to);
-  fcntl(0, F_SETFL, flags);
 # endif // !defined(__native_client__)
+  fcntl(0, F_SETFL, flags);
 
   fifo_flag = -1;
   wait_flag = -1;
@@ -184,12 +188,8 @@ uart_putchar
 (unsigned char c)
 {
 #if defined(TEST)
-# if defined(__native_client__)
-  nacl_putc(c);
-# else // defined(__native_client__)
   fputc((int)c, stdout);
   fflush(stdout);
-# endif // defined(__native_client__)
   wait_flag = -1;
 #else // defined(TEST)
   disable_int();
@@ -230,12 +230,7 @@ void
 uart_puts
 (char *s)
 {
-#if defined(__native_client__)
-  nacl_puts(s);
-  wait_flag = -1;
-#else // defined(__native_client__)
   while (0 != *s) uart_putchar(*s++);
-#endif // defined(__native_client__)
 }
 
 void
@@ -294,11 +289,7 @@ uart_peek
   nacl_sleep();
 # endif // !defined(__native_client__)
   wait_flag = 0;
-# if defined(__native_client__)
-  fifo_flag = nacl_getc();
-# else // defined(__native_client__)
   fifo_flag = fgetc(stdin);
-# endif // defined(__native_client__)
   if (-1 != fifo_flag) return 1;
   return 0;
 #else // defined(TEST)

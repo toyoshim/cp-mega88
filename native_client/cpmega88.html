@@ -51,10 +51,25 @@
     }
 
     function handleMessage(message_event) {
-      if (didLoad)
-        Terminal.appendString(message_event.data);
-      else
-        log += message_event.data;
+      var data = message_event.data;
+      if (!data)
+        return;
+      var type = data[0];
+      switch (type) {
+      case 'E':
+        console.log(data.slice(1));
+        break;
+      case 'S':
+        var id = data[1];
+        if (1 == id) {
+          if (didLoad)
+            Terminal.appendString(data.slice(2));
+          else
+            log += data.slice(2);
+        } else {
+          console.log(data.slice(2));
+        }
+      }
     }
 
   </script>
@@ -73,12 +88,12 @@
       Terminal.appendString('Loading NaCl module...');
       document.onkeypress = function (e) {
         document.getElementById('cpmega88').postMessage(
-            'C' + String.fromCharCode(e.which));
+            'S0' + String.fromCharCode(e.which));
       }
       document.onkeydown = function (e) {
         if (8 == e.which) {
           document.getElementById('cpmega88').postMessage(
-              'C' + String.fromCharCode(e.which));
+              'S0' + String.fromCharCode(e.which));
           return false;
         }
         return true;
