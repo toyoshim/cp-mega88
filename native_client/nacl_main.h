@@ -36,9 +36,6 @@
 extern "C" {
 # endif // defined(__cplusplus)
 
-void nacl_puts(const char *s);
-void nacl_putc(char c);
-int nacl_getc(void);
 void nacl_sleep(void);
 
 # if defined(__cplusplus)
