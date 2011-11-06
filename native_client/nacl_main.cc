@@ -123,7 +123,7 @@ public:
 private:
   pthread_t thread_main;
   pthread_mutex_t mutex;
-  pp::Core *core;
+  pp::Core* core;
   naclfs::NaClFs* naclfs;
   bool thread_init;
   bool thread_block;
