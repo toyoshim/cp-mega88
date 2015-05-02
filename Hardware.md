@@ -1,5 +1,5 @@
 # Schematic #
-<a href='http://cp-mega88.googlecode.com/files/mega88_sch.png'><img src='http://cp-mega88.googlecode.com/files/mega88_sch.png' width='800' /></a>
+<a href='https://raw.github.com/wiki/toyoshim/cp-mega88/data/mega88_sch.png'><img src='https://raw.github.com/wiki/toyoshim/cp-mega88/data/mega88_sch.png' width='800' /></a>
 
 # ATMEGA88 pin assignment #
 | **pin** | **common** | **isp** | **usart** | **sd card** | **74hc374-0** | **74hc374-1** | **m68af127b** | **comment** |
