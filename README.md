@@ -76,6 +76,9 @@ to be written
 # Schematic
 <a href="https://raw.github.com/wiki/toyoshim/cp-mega88/data/mega88_sch.png"><img src="https://raw.github.com/wiki/toyoshim/cp-mega88/data/mega88_sch.png" width="800"/></a>
 
+#Prebuilt Firmware Download
+ * [Dec/26/2010 version](https://raw.github.com/wiki/toyoshim/cp-mega88/data/cpmega88-20101226.hex "cpmega88-20101226.hex")
+
 # Internal Resources
  * [pin assignment](https://github.com/toyoshim/cp-mega88/blob/wiki/Hardware.md)
  * [development log slides](https://docs.google.com/present/view?id=d6f82bz_5n23p4jc6)
