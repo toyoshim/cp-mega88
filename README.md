@@ -9,7 +9,7 @@ You can try to run CP/M on POSIX environment.
 
 ## Build
 ```
-% hg clone https://cp-mega88.googlecode.com/hg/ cp-mega88
+% git clone https://github.com/toyoshim/cp-mega88.git
 % cd cp-mega88
 % make -f Makefile.posix
 ```
@@ -74,10 +74,10 @@ monitor commands
 to be written
 
 # Schematic
-<a href="http://cp-mega88.googlecode.com/files/mega88_sch.png"><img src="http://cp-mega88.googlecode.com/files/mega88_sch.png" width="800"/></a>
+<a href="https://raw.github.com/wiki/toyoshim/cp-mega88/data/mega88_sch.png"><img src="https://raw.github.com/wiki/toyoshim/cp-mega88/data/mega88_sch.png" width="800"/></a>
 
 # Internal Resources
- * [pin assignment](http://code.google.com/p/cp-mega88/wiki/Hardware)
+ * [pin assignment](https://github.com/toyoshim/cp-mega88/blob/wiki/Hardware.md)
  * [development log slides](https://docs.google.com/present/view?id=d6f82bz_5n23p4jc6)
  * [demo movie](http://www.sprasia.com/channel/toyoshim/20100127012926.html)
  * [LT slides](http://prezi.com/jgletspfbwa3/cpmega88/)
