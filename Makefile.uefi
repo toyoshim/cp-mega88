@@ -1,0 +1,70 @@
+#
+# Copyright (c) 2015, Takashi TOYOSHIMA <toyoshim@gmail.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# - Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#
+# - Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+#
+# - Neither the name of the authors nor the names of its contributors may be
+#   used to endorse or promote products derived from this software with out
+#   specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUE
+# NTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+# GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+# DAMAGE.
+#
+
+CC	= gcc
+OBJCOPY	= objcopy
+LD	= ld
+INCS	= -I/usr/include/efi -I/usr/include/efi/x86_64
+DEFS	= -DTEST -DEFI -DGNU_EFI_USE_MS_ABI -D__KERNEL__
+FLAGS	= --std=c11 -fpic -fshort-wchar -fno-stack-protector -fno-stack-check
+CFLAGS	= -O2 -Wall -maccumulate-outgoing-args $(INCS) $(DEFS) $(FLAGS)
+CRT0	= /usr/lib/crt0-efi-x86_64.o
+LIBGCC	= `gcc -print-libgcc-file-name`
+LIBS	= -nostdlib $(CRT0) -L/usr/lib -lefi -lgnuefi $(LIBGCC)
+LDS	= /usr/lib/elf_x86_64_efi.lds
+LDFLAGS	= --warn-common --no-undefined --fatal-warnings -shared -T $(LDS) \
+	-Bsymbolic
+TARGET	= cpmega88
+EFIROOT	= .
+OBJS	= main.o uart.o sram.o sdcard.o fat.o eeprom.o cpu_8080.o
+
+all: $(TARGET).efi
+
+$(TARGET).efi: $(TARGET).so
+	$(OBJCOPY) -j .text -j .sdata -j .data -j .dynamic -j .dynsym \
+		-j .rel -j .rela -j .rel.\* -j .rela.\* \
+		-j .rel\* -j .rela\* -j .reloc \
+		--target efi-app-x86_64 $< $@
+
+%.o: %.c
+	$(CC) -c $(CFLAGS) -o $@ $<
+
+$(TARGET).so: $(OBJS)
+	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+clean:
+	rm -rf *.o *.so $(TARGET) $(EFIROOT)/EFI
+
+install:
+	mkdir -p $(EFIROOT)/EFI/Boot
+	cp $(TARGET).efi $(EFIROOT)/EFI/Boot/bootx64.efi
+	mkdir -p $(EFIROOT)/EFI/cpmega88
+	cp $(TARGET).efi $(EFIROOT)/EFI/cpmega88/

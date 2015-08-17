@@ -30,25 +30,44 @@
  */
 
 #include "eeprom.h"
-#if defined(TEST)
+#if defined(EFI)
+# include <efi.h>
+#elif defined(TEST) // defined(EFI)
 # include <stdio.h>
 #else // defined(TEST)
 # include <avr/io.h>
 #endif // defined(TEST)
 
 #if defined(TEST)
+
+# if defined(EFI)
+extern EFI_FILE_HANDLE efi_fs;
+EFI_FILE_HANDLE eep_fp = NULL;
+# else // defined(TEST)
 FILE *eep_fp = NULL;
+# endif
 
 int
 map
 (void)
 {
+#if defined(EFI)
+  UINT64 mode = EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE | EFI_FILE_MODE_CREATE;
+  EFI_STATUS status = uefi_call_wrapper(
+      efi_fs->Open, 5, efi_fs, &eep_fp, L"EFI\\cpmega88\\eeprom.img", mode, 0);
+  if (!EFI_ERROR(status)) return 0;
+  mode = EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE;
+  status = uefi_call_wrapper(
+      efi_fs->Open, 5, efi_fs, &eep_fp, L"eeprom.img", mode, 0);
+  return EFI_ERROR(status) ? -1 : 0;
+#else
   if (NULL != eep_fp) return 0;
   eep_fp = fopen("eeprom.img", "r+");
   if (NULL == eep_fp) eep_fp = fopen("eeprom.img", "w");
   if (NULL == eep_fp) eep_fp = fopen("eeprom.img", "r");
   if (NULL == eep_fp) return -1;
   return 0;
+#endif
 }
 #endif // defined(TEST)
 
@@ -56,8 +75,13 @@ void
 eeprom_write
 (unsigned short addr, unsigned char data)
 {
-#if defined(TEST)
   if (0 != map()) return;
+#if defined(EFI)
+  EFI_STATUS status = uefi_call_wrapper(efi_fs->SetPosition, 2, eep_fp, addr);
+  if (EFI_ERROR(status)) return;
+  UINTN size = 1;
+  uefi_call_wrapper(eep_fp->Write, 3, eep_fp, &size, &data);
+#elif defined(TEST) // defined(EFI)
   if (0 != fseek(eep_fp, addr, SEEK_SET)) return;
   fwrite(&data, 1, 1, eep_fp);
 #else // defined(TEST)
@@ -73,8 +97,16 @@ unsigned char
 eeprom_read
 (unsigned short addr)
 {
-#if defined(TEST)
   if (0 != map()) return 0xff;
+#if defined(EFI)
+  EFI_STATUS status = uefi_call_wrapper(efi_fs->SetPosition, 2, eep_fp, addr);
+  if (EFI_ERROR(status)) return 0xff;
+  UINTN size = 1;
+  unsigned char data;
+  status = uefi_call_wrapper(eep_fp->Read, 3, eep_fp, &size, &data);
+  if (EFI_ERROR(status)) return 0xff;
+  return data;
+#elif defined(TEST) // defined(EFI)
   if (0 != fseek(eep_fp, addr, SEEK_SET)) return 0xff;
   unsigned char rc;
   if (1 != fread(&rc, 1, 1, eep_fp)) return 0xff;

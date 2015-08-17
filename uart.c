@@ -34,6 +34,9 @@
 # if defined(__native_client__)
 #  include "native_client/nacl_main.h"
 # endif // defined(__native_client__)
+# if defined(EFI)
+#  include <efi.h>
+# endif
 # include <stdio.h>
 # include <stdlib.h>
 # include <fcntl.h>
@@ -51,10 +54,14 @@
 # if !defined(__native_client__)
 struct termios org_to;
 # endif // !defined(__native_client__)
+# if defined(EFI)
+extern EFI_SYSTEM_TABLE* efi_systab;
+# endif // defined(EFI)
 int org_flags;
 int fifo_flag;
 int wait_flag;
 #else // if defined(TEST)
+
 extern unsigned short uart_tx(unsigned char);
 extern unsigned char uart_rx(void);
 
@@ -126,7 +133,7 @@ ISR
 }
 #endif // !defined(TEST)
 
-#if defined(TEST)
+#if defined(TEST) && !defined(EFI)
 void
 uart_term
 (int num)
@@ -137,13 +144,14 @@ uart_term
   fcntl(0, F_SETFL, org_flags);
   exit(0);
 }
-#endif // defined(TEST)
+#endif // defined(TEST) && !defined(EFI)
 
 void
 uart_init
 (void)
 {
-#if defined(TEST)
+#if defined(EFI)
+#elif defined(TEST) // defined(EFI)
 # if !defined(__native_client__)
   tcgetattr(0, &org_to);
 # endif // !defined(__native_client__)
@@ -187,7 +195,12 @@ void
 uart_putchar
 (unsigned char c)
 {
-#if defined(TEST)
+#if defined(EFI)
+  wchar_t s[2];
+  s[0] = c;
+  s[1] = 0;
+  uefi_call_wrapper(efi_systab->ConOut->OutputString, 2, efi_systab->ConOut, s);
+#elif defined(TEST) // defined(EFI)
   fputc((int)c, stdout);
   fflush(stdout);
   wait_flag = -1;
@@ -245,7 +258,17 @@ int
 uart_getchar
 (void)
 {
-#if defined(TEST)
+#if defined(EFI)
+  EFI_EVENT event[1];
+  UINTN index;
+  EFI_INPUT_KEY key;
+  event[0] = efi_systab->ConIn->WaitForKey;
+  uefi_call_wrapper(
+      efi_systab->BootServices->WaitForEvent, 3, 1, event, &index);
+  uefi_call_wrapper(
+      efi_systab->ConIn->ReadKeyStroke, 2, efi_systab->ConIn, &key);
+  return key.UnicodeChar;
+#elif defined(TEST) // defined(EFI)
   wait_flag = -1;
   if (-1 == fifo_flag) uart_peek();
   wait_flag = -1;
@@ -276,7 +299,25 @@ int
 uart_peek
 (void)
 {
-#if defined(TEST)
+#if defined(EFI)
+  EFI_EVENT event[2];
+  UINTN index;
+  event[0] = efi_systab->ConIn->WaitForKey;
+  EFI_STATUS status = uefi_call_wrapper(
+      efi_systab->BootServices->CreateEvent, 5,
+      EVT_TIMER, 0, NULL, NULL, &event[1]);
+  if (EFI_ERROR(status)) return 0;
+  status = uefi_call_wrapper(
+      efi_systab->BootServices->SetTimer, 3, event[1], TimerRelative, 0);
+  if (!EFI_ERROR(status)) {
+    status = uefi_call_wrapper(
+        efi_systab->BootServices->WaitForEvent, 3, 2, event, &index);
+  }
+  uefi_call_wrapper(
+      efi_systab->BootServices->CloseEvent, 1, event[1]);
+  if (EFI_ERROR(status) || index == 1) return 0;
+  return 1;
+#elif defined(TEST) // defined(EFI)
 # if !defined(__native_client__)
   if (-1 != wait_flag) {
     struct timespec req;

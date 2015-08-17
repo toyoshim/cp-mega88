@@ -1,20 +1,22 @@
-# What is this?
+# CP/Mega88
+
+## What is this?
 This is an i8080 emulator running on ATmega88, and on which CP/M can run.
 
-# Specification
+## Specification
 to be written
 
-# Software Test
-You can try to run CP/M on POSIX environment.
+## Software Test
+You can try running CP/M on POSIX environment, or EFI firmware.
 
-## Build
+### Build for POSIX
 ```
 % git clone https://github.com/toyoshim/cp-mega88.git
 % cd cp-mega88
 % make -f Makefile.posix
 ```
 
-## Boot CP/M
+### Boot CP/M on POSIX
 For booting, you need a CP/M disk image named 'sdcard.img' in current directory. i8080 I/O configuration of CP/Mega88 is compatible with z80pack. So you can use the image for z80pack (see following external resources section).
 ```
 % tar zxvf z80pack-1.17.tgz
@@ -50,7 +52,37 @@ CP/Mega88>b
 A>_
 ```
 
-## Monitor Commands
+### As a UEFI application
+If you want, you can run it without any operating systems. Here is how to
+build it on Ubuntu 14.04.
+```
+% sudo apt-get install gnu-efi
+% make -f Makefile.uefi
+```
+You can place a CP/M disk image at EFI/cpmega88/sdcard.img, and run
+cpmega88.efi from UEFI Shell, or boot it directly by e.g., placing it to
+EFI/Boot/bootx64.efi and disabling the Secure Boot.
+
+Here is an example step to create a bootable media.
+```
+% sudo parted -a optimal /dev/sdb  # assuming the /dev/sdb is a target device.
+(parted) mklabel gpt
+(parted) mkpart primary fat32 0 100%
+(parted) quit
+% mkdir efi
+% sudo mkfs.vfat /dev/sdb1
+% sudo mount /dev/sdb1 efi
+% make -f Makefile.uefi install
+% sudo cp -r EFI efi
+% sudo cp $(somewhere)/sdcard.img efi/EFI/cpmega88/
+% sudo umount efi
+% rmdir efi
+```
+
+You would like the CP/Mega88 auto boot mode that could be enabled by "a on"
+from the monitor. Configuration will be stored to EFI/cpmega/eeprom.img
+
+### Monitor Commands
 ```
 CP/Mega88>help
 monitor commands
@@ -70,20 +102,20 @@ monitor commands
  vt <on/off>      : vt100 compatible mode
 ```
 
-# Hardware Test
+## Hardware Test
 to be written
 
-# Schematic
+## Schematic
 <a href="https://raw.github.com/wiki/toyoshim/cp-mega88/data/mega88_sch.png"><img src="https://raw.github.com/wiki/toyoshim/cp-mega88/data/mega88_sch.png" width="800"/></a>
 
-#Prebuilt Firmware Download
+## Prebuilt Firmware Download
  * [Dec/26/2010 version](https://raw.github.com/wiki/toyoshim/cp-mega88/data/cpmega88-20101226.hex "cpmega88-20101226.hex")
 
-# Internal Resources
+## Internal Resources
  * [pin assignment](https://github.com/toyoshim/cp-mega88/blob/wiki/Hardware.md)
  * [development log slides](https://docs.google.com/present/view?id=d6f82bz_5n23p4jc6)
  * [demo movie](http://www.sprasia.com/channel/toyoshim/20100127012926.html)
  * [LT slides](http://prezi.com/jgletspfbwa3/cpmega88/)
 
-# External Resources
+## External Resources
  * [z80pack](http://www.unix4fun.org/z80pack/) ... Unfortunately, official site is offline now. Please check [this thread](http://groups.google.com/group/comp.os.cpm/browse_thread/thread/5c4e450309d661c4) of comp.os.cpm.

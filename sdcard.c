@@ -30,7 +30,9 @@
  */
 
 #include "sdcard.h"
-#if defined(TEST)
+#if defined(EFI)
+# include <efi.h>
+#elif defined(TEST) // defined(EFI)
 # include <stdio.h>
 #else // defined(TEST)
 # include <avr/io.h>
@@ -54,7 +56,10 @@ crc;
 static unsigned long
 cur_blk;
 
-#if defined(TEST)
+#if defined(EFI)
+extern EFI_FILE_HANDLE efi_fs;
+EFI_FILE_HANDLE fp = NULL;
+#elif defined(TEST) // defined(EFI)
 static FILE *fp = NULL;
 #else // defined(TEST)
 static void
@@ -122,7 +127,8 @@ void
 sdcard_init
 (void)
 {
-#if defined(TEST)
+#if defined(EFI)
+#elif defined(TEST) // defined(EFI)
   if (NULL != fp) fclose(fp);
   fp = NULL;
 #else // defined(TEST)
@@ -144,7 +150,15 @@ int
 sdcard_open
 (void)
 {
-#if defined(TEST)
+#if defined(EFI)
+  UINT64 mode = EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE;
+  EFI_STATUS status = uefi_call_wrapper(
+      efi_fs->Open, 5, efi_fs, &fp, L"EFI\\cpmega88\\sdcard.img", mode, 0);
+  if (!EFI_ERROR(status)) return 0;
+  status = uefi_call_wrapper(
+      efi_fs->Open, 5, efi_fs, &fp, L"sdcard.img", mode, 0);
+  return EFI_ERROR(status) ? -1 : 0;
+#elif defined(TEST) // defined(EFI)
   fp = fopen("sdcard.img", "r+");
   if (NULL == fp) fp = fopen("sdcard.img", "r");
   if (NULL == fp) return -1;
@@ -179,9 +193,17 @@ int
 sdcard_fetch
 (unsigned long blk_addr)
 {
-#if defined(TEST)
   if (NULL == fp) return -1;
   if (0 != (blk_addr & 0x1ff)) return -2;
+#if defined(EFI)
+  EFI_STATUS status = uefi_call_wrapper(fp->SetPosition, 2, fp, blk_addr);
+  if (EFI_ERROR(status)) return -3;
+  UINTN size = 512;
+  status = uefi_call_wrapper(fp->Read, 3, fp, &size, buffer);
+  if (EFI_ERROR(status) || 512 != size) return -4;
+  cur_blk = blk_addr;
+  return 0;
+#elif defined(TEST) // defined(EFI)
   if (0 != fseek(fp, blk_addr, SEEK_SET)) return -3;
   if (512 != fread(buffer, 1, 512, fp)) return -4;
   cur_blk = blk_addr;
@@ -209,9 +231,16 @@ int
 sdcard_store
 (unsigned long blk_addr)
 {
-#if defined(TEST)
   if (NULL == fp) return -1;
   if (0 != (blk_addr & 0x1ff)) return -2;
+#if defined(EFI)
+  EFI_STATUS status = uefi_call_wrapper(fp->SetPosition, 2, fp, blk_addr);
+  if (EFI_ERROR(status)) return -3;
+  UINTN size = 512;
+  status = uefi_call_wrapper(fp->Write, 3, fp, &size, buffer);
+  if (EFI_ERROR(status) || 512 != size) return -4;
+  return 0;
+#elif defined(TEST) // defined(EFI)
   if (0 != fseek(fp, blk_addr, SEEK_SET)) return -3;
   if (512 != fwrite(buffer, 1, 512, fp)) return -4;
   return 0;

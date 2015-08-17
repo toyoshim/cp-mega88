@@ -34,6 +34,10 @@
 #else // defined(TEST)
 # include <avr/io.h>
 #endif // !defined(TEST)
+#if defined(EFI)
+# include <efi/efi.h>
+# include <efi/efilib.h>
+#endif // defined(EFI)
 #include "uart.h"
 #include "sram.h"
 #include "sdcard.h"
@@ -54,7 +58,7 @@
 #else // defined(TEST)
 # define CPU_EMU_A
 
-//# define DEBUG
+//# define CPM_DEBUG
 
 # define USE_FAT
 
@@ -85,12 +89,22 @@
 #endif // !defined(NULL)
 
 static char wr_prt = 0;
+#if defined(EFI)
+static char vt_cnv = 2;
+#else
 static char vt_cnv = 1;
+#endif
 static char sd_fat = 0;
 
 #if defined(CPU_EMU_C)
 static cpu_8080_work work;
 #endif // defined(CPU_EMU_C)
+
+#if defined(EFI)
+EFI_HANDLE *efi_image;
+EFI_SYSTEM_TABLE *efi_systab;
+EFI_FILE_HANDLE efi_fs;
+#endif
 
 #if defined(TEST)
 jmp_buf jb;
@@ -103,7 +117,10 @@ void
 reset
 (void)
 {
-#if defined(TEST)
+#if defined(EFI)
+  uefi_call_wrapper(efi_systab->BootServices->Exit, 3,
+                    efi_image, EFI_SUCCESS, 0, NULL);
+#elif defined(TEST)
   longjmp(jb, 0);
 #else // defined(TEST)
   asm ("mov r30, r1");
@@ -146,7 +163,7 @@ boot
   sram_write(0x0007, 0x3c + 0xb0);
 #if defined(CPU_EMU_C)
   do {
-# if defined(DEBUG)
+# if defined(CPM_DEBUG)
     unsigned char op = sram_read(work.pc);
     uart_puts("pc: ");
     uart_puthex(work.pc >> 8);
@@ -169,16 +186,16 @@ boot
     uart_putsln(")");
     cpu_8080_step(&work);
   } while (1);
-# else // defined(DEBUG)
+# else // defined(CPM_DEBUG)
   } while (0 == cpu_8080_step(&work));
-# endif // defined(DEBUG)
+# endif // defined(CPM_DEBUG)
 #else // if defined(CPU_EMU_A)
-# if defined(DEBUG)
+# if defined(CPM_DEBUG)
   uart_putsln("            A F B C D E H LPhPlShSl");
   char r = 0;
-# endif // defined(DEBUG)
+# endif // defined(CPM_DEBUG)
   do {
-# if defined(DEBUG)
+# if defined(CPM_DEBUG)
     unsigned char op = sram_read((i8080_work.reg_pc_h << 8) | i8080_work.reg_pc_l);
     uart_puts("pc: ");
     uart_puthex(i8080_work.reg_pc_h);
@@ -202,9 +219,9 @@ boot
     //if (0 != r) break;
     r = i8080_run();
   } while (1);
-# else // defined(DEBUG)
+# else // defined(CPM_DEBUG)
   } while (0 == i8080_run());
-# endif // defined(DEBUG)
+# endif // defined(CPM_DEBUG)
 #endif // defined(CPU_EMU_C)
 #if !defined(MSG_MIN)
   uart_putsln("quit vm");
@@ -394,12 +411,12 @@ prompt
     if (NULL == arg) goto usage;
     unsigned short n;
     n = getnum(arg);
-#if !defined(MSG_MIN)
+# if !defined(MSG_MIN)
     uart_puts("<memory read 0x");
     uart_puthex(n >> 8);
     uart_puthex(n);
     uart_putsln("> ");
-#endif // !defined(MSG_MIN)
+# endif // !defined(MSG_MIN)
     unsigned char c = sram_read(n);
     uart_puthex(c);
     uart_putsln("");
@@ -413,22 +430,22 @@ prompt
     unsigned short n_data;
     n_addr = getnum(addr);
     n_data = getnum(data);
-#if !defined(MSG_MIN)
+# if !defined(MSG_MIN)
     uart_puts("<memory write 0x");
     uart_puthex(n_addr >> 8);
     uart_puthex(n_addr);
     uart_puts(",0x");
     uart_puthex(n_data);
     uart_putsln(">");
-#endif // !defined(MSG_MIN)
+# endif // !defined(MSG_MIN)
     sram_write(n_addr, n_data);
     return;
 #endif // defined(MON_MEM)
 #if defined (MON_SDC)
   } else if (0 == strdcmp("so", cmd, 0)) {
-#if !defined(MSG_MIN)
+# if !defined(MSG_MIN)
     uart_putsln("<sdcard open>");
-#endif // !defined(MSG_MIN)
+# endif // !defined(MSG_MIN)
     char rc = sdcard_open();
     if (rc >= 0) uart_putsln(" detect");
     else {
@@ -438,9 +455,9 @@ prompt
     }
     return;
   } else if (0 == strdcmp("sd", cmd, 0)) {
-#if !defined(MSG_MIN)
+# if !defined(MSG_MIN)
     uart_putsln("<sdcard dump block buffer>");
-#endif // !defined(MSG_MIN)
+# endif // !defined(MSG_MIN)
     uart_puts(" ");
     int i;
     for (i = 0; i < 512; i++) {
@@ -466,12 +483,12 @@ prompt
   } else if (0 == strdcmp("sf", cmd, ' ')) {
     if (NULL == arg) goto usage;
     unsigned long addr = getnum(arg);
-#if !defined(MSG_MIN)
+# if !defined(MSG_MIN)
     uart_puts("<sdcard fetch block 0x");
     uart_puthex(addr >> 8);
     uart_puthex(addr);
     uart_putsln(">");
-#endif // !defined(MSG_MIN)
+# endif // !defined(MSG_MIN)
     char rc = sdcard_fetch(addr << 9);
     if (rc >= 0) uart_putsln(" ok");
     else {
@@ -483,12 +500,12 @@ prompt
   } else if (0 == strdcmp("ss", cmd, ' ')) {
     if (NULL == arg) goto usage;
     unsigned long addr = getnum(arg);
-#if !defined(MSG_MIN)
+# if !defined(MSG_MIN)
     uart_puts("<sdcard store block 0x");
     uart_puthex(addr >> 8);
     uart_puthex(addr);
     uart_putsln(">");
-#endif // !defined(MSG_MIN)
+# endif // !defined(MSG_MIN)
     char rc = sdcard_store(addr << 9);
     if (rc >= 0) uart_putsln(" ok");
     else {
@@ -508,11 +525,11 @@ prompt
       fat_name(name);
       uart_putchar(' ');
       uart_putchar((0 != (0x10 & attr))? 'd': '-');
-#if !defined(MSG_MIN)
+# if !defined(MSG_MIN)
       uart_putchar((0 == (0x04 & attr))? 'r': '-');
       uart_putchar((0 == (0x01 & attr))? 'w': '-');
       uart_putchar((0 != (0x10 & attr))? 'x': '-');
-#endif // !defined(MSG_MIN)
+# endif // !defined(MSG_MIN)
       uart_putchar(' ');
       uart_puts(name);
       uart_putsln("");
@@ -543,9 +560,9 @@ prompt
 #if defined(MON_CON)
   } else if (0 == strdcmp("vt", cmd, ' ')) {
     if (NULL == arg) goto usage;
-#if !defined(MSG_MIN)
+# if !defined(MSG_MIN)
     uart_puts("<vt100 compatible mode");
-#endif // !defined(MSG_MIN)
+# endif // !defined(MSG_MIN)
     if (0 == strdcmp("on", arg, 0)) {
       uart_puts(" on");
       vt_cnv = 1;
@@ -553,12 +570,32 @@ prompt
       uart_puts(" off");
       vt_cnv = 0;
     }
-#if defined(MSG_MIN)
+# if defined(MSG_MIN)
     uart_putsln("");
-#else // defined(MSG_MIN)
+# else // defined(MSG_MIN)
     uart_putsln(">");
-#endif // defined(MSG_MIN)
+# endif // defined(MSG_MIN)
     return;
+# if defined(EFI)
+  } else if (0 == strdcmp("efi", cmd, ' ')) {
+    if (NULL == arg) goto usage;
+#  if !defined(MSG_MIN)
+    uart_puts("<EFI terminal mode");
+#  endif // !defined(MSG_MIN)
+    if (0 == strdcmp("on", arg, 0)) {
+      uart_puts(" on");
+      vt_cnv = 2;
+    } else {
+      uart_puts(" off");
+      vt_cnv = 0;
+    }
+#  if defined(MSG_MIN)
+    uart_putsln("");
+#  else // defined(MSG_MIN)
+    uart_putsln(">");
+#  endif // defined(MSG_MIN)
+    return;
+# endif // defined(EFI)
 #endif // defined(MON_CON)
   }
  usage:
@@ -586,6 +623,9 @@ prompt
 #  endif // defined(MON_FAT)
 #  if defined(MON_CON)
   uart_putsln(" vt <on/off>      : vt100 compatible mode");
+#   if defined(EFI)
+  uart_putsln(" efi <on/off>     : EFI terminal mode");
+#   endif // defined(EFI)
 #  endif // defined(MON_CON)
 # else // !defined(MSG_MIN)
   uart_puts("  CMD R;B;WP t;A t");
@@ -715,6 +755,9 @@ out
   static unsigned char dma_lo = 0;
   static unsigned char dma_hi = 0;
   static unsigned char esc = 0;
+#if defined(EFI)
+  static INT64 row;
+#endif
 
   switch(port) {
   case 1:
@@ -722,28 +765,48 @@ out
     case 1:
       if ('=' == val) esc = 2;
       else if (';' == val) {
-	uart_puts("\e[2J");
-	esc = 0;
+        if (vt_cnv == 1) {
+          uart_puts("\e[2J");
+        } else {
+          uefi_call_wrapper(efi_systab->ConOut->ClearScreen, 1,
+                            efi_systab->ConOut);
+        }
+        esc = 0;
       } else esc = 0;
       break;
     case 2:
-      uart_puts("\e[");
-      uart_putnum_u16(val - 0x20 + 1, -1);
+      if (vt_cnv == 1) {
+        uart_puts("\e[");
+        uart_putnum_u16(val - 0x20 + 1, -1);
+      } else {
+        row = val - 0x20;
+      }
       esc = 3;
       break;
     case 3:
-      uart_putchar(';');
-      uart_putnum_u16(val - 0x20 + 1, -1);
-      uart_putchar('H');
+      if (vt_cnv == 1) {
+        uart_putchar(';');
+        uart_putnum_u16(val - 0x20 + 1, -1);
+        uart_putchar('H');
+      } else {
+        INT64 column = val - 0x20;
+        uefi_call_wrapper(efi_systab->ConOut->SetCursorPosition, 3,
+                          efi_systab->ConOut, column, row);
+      }
       esc = 0;
       break;
     default:
       if (0 == vt_cnv) uart_putchar(val);
       else {
-	if (0x1a == val) {
-	  uart_puts("\e[2J");
-	} else if (0x1b == val) esc = 1;
-	else uart_putchar(val);
+        if (0x1a == val) {
+          if (vt_cnv == 1) {
+            uart_puts("\e[2J");
+          } else {
+            uefi_call_wrapper(efi_systab->ConOut->ClearScreen, 1,
+                              efi_systab->ConOut);
+          }
+        } else if (0x1b == val) esc = 1;
+        else uart_putchar(val);
       }
     }
     break;
@@ -798,16 +861,32 @@ in
   return 0;
 }
 
+#if defined(EFI)
+EFI_STATUS
+efi_main
+(EFI_HANDLE *image, EFI_SYSTEM_TABLE *systab)
+#else // defined(EFI)
 int
-#if defined(__native_client__)
+# if defined(__native_client__)
 nacl_main
 (void)
-#else // defined(__native_client__)
+# else // defined(__native_client__)
 main
 (int argc, char **argv)
-#endif // defined(__native_client__)
+# endif // defined(__native_client__)
+#endif // defined(EFI)
 {
-#if defined(TEST)
+#if defined(EFI)
+  efi_image = image;
+  efi_systab = systab;
+  EFI_FILE_IO_INTERFACE *efi_fio;
+  EFI_STATUS status = uefi_call_wrapper(
+      efi_systab->BootServices->LocateProtocol, 3,
+      &FileSystemProtocol, NULL, (void**)&efi_fio);
+  if (EFI_ERROR(status)) return 0;
+  status = uefi_call_wrapper(efi_fio->OpenVolume, 2, efi_fio, &efi_fs);
+  if (EFI_ERROR(status)) return 0;
+#elif defined(TEST) // defined(EFI)
   setjmp(jb);
 #endif // defined(TEST)
   uart_init();
@@ -874,9 +953,9 @@ main
   for (;;) prompt();
 #else // defined(MONITOR)
   uart_putsln("starting CP/M 2.2 for ATmega88 with i8080 emulation");
-#if defined(DEBUG)
+#if defined(CPM_DEBUG)
   while (-1 == uart_getchar());
-#endif // defined(DEBUG)
+#endif // defined(CPM_DEBUG)
   boot();
 #endif // defined(MONITOR)
   return 0;
