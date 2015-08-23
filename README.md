@@ -118,4 +118,4 @@ to be written
  * [LT slides](http://prezi.com/jgletspfbwa3/cpmega88/)
 
 ## External Resources
- * [z80pack](http://www.autometer.de/unix4fun/z80pack/)
+ * [z80pack](http://www.autometer.de/unix4fun/z80pack/) ... Follow the first link in the Downloads section to find a z80pack-1.xx.tgz.
