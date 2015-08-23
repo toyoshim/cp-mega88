@@ -118,4 +118,4 @@ to be written
  * [LT slides](http://prezi.com/jgletspfbwa3/cpmega88/)
 
 ## External Resources
- * [z80pack](http://www.unix4fun.org/z80pack/) ... Unfortunately, official site is offline now. Please check [this thread](http://groups.google.com/group/comp.os.cpm/browse_thread/thread/5c4e450309d661c4) of comp.os.cpm.
+ * [z80pack](http://www.autometer.de/unix4fun/z80pack/)
