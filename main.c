@@ -749,7 +749,7 @@ void
 out
 (unsigned char port, unsigned char val)
 {
-  static unsigned char drive = 0;
+  static unsigned char drive __attribute__ ((unused)) = 0;
   static unsigned char track = 0;
   static unsigned char sect = 0;
   static unsigned char dma_lo = 0;
@@ -757,7 +757,7 @@ out
   static unsigned char esc = 0;
 #if defined(EFI)
   static INT64 row;
-#endif
+#endif // defined(EFI)
 
   switch(port) {
   case 1:
@@ -767,9 +767,11 @@ out
       else if (';' == val) {
         if (vt_cnv == 1) {
           uart_puts("\e[2J");
+#if defined(EFI)
         } else {
           uefi_call_wrapper(efi_systab->ConOut->ClearScreen, 1,
                             efi_systab->ConOut);
+#endif // defined(EFI)
         }
         esc = 0;
       } else esc = 0;
@@ -778,8 +780,10 @@ out
       if (vt_cnv == 1) {
         uart_puts("\e[");
         uart_putnum_u16(val - 0x20 + 1, -1);
+#if defined(EFI)
       } else {
         row = val - 0x20;
+#endif // defined(EFI)
       }
       esc = 3;
       break;
@@ -788,10 +792,12 @@ out
         uart_putchar(';');
         uart_putnum_u16(val - 0x20 + 1, -1);
         uart_putchar('H');
+#if defined(EFI)
       } else {
         INT64 column = val - 0x20;
         uefi_call_wrapper(efi_systab->ConOut->SetCursorPosition, 3,
                           efi_systab->ConOut, column, row);
+#endif // defined(EFI)
       }
       esc = 0;
       break;
@@ -801,9 +807,11 @@ out
         if (0x1a == val) {
           if (vt_cnv == 1) {
             uart_puts("\e[2J");
+#if defined(EFI)
           } else {
             uefi_call_wrapper(efi_systab->ConOut->ClearScreen, 1,
                               efi_systab->ConOut);
+#endif // defined(EFI)
           }
         } else if (0x1b == val) esc = 1;
         else uart_putchar(val);
