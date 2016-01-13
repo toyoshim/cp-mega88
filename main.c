@@ -907,10 +907,16 @@ main
   efi_image = image;
   efi_systab = systab;
   EFI_FILE_IO_INTERFACE *efi_fio;
+  EFI_GUID LoadedImageProtocol = LOADED_IMAGE_PROTOCOL;
+  EFI_LOADED_IMAGE *efi_li;
   EFI_CONSOLE_CONTROL_INTERFACE *efi_cc;
   EFI_STATUS status = uefi_call_wrapper(
-      efi_systab->BootServices->LocateProtocol, 3,
-      &FileSystemProtocol, NULL, (void**)&efi_fio);
+      efi_systab->BootServices->HandleProtocol, 3,
+      image, &LoadedImageProtocol, (void**)&efi_li);
+  if (EFI_ERROR(status)) return 0;
+  status = uefi_call_wrapper(
+      efi_systab->BootServices->HandleProtocol, 3,
+      efi_li->DeviceHandle, &FileSystemProtocol, (void**)&efi_fio);
   if (EFI_ERROR(status)) return 0;
   status = uefi_call_wrapper(efi_fio->OpenVolume, 2, efi_fio, &efi_fs);
   if (EFI_ERROR(status)) return 0;
