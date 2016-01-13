@@ -1,7 +1,7 @@
 # CP/Mega88
 
 ## What is this?
-This is an i8080 emulator running on ATmega88, and on which CP/M can run.
+This is an i8080 emulator running on ATmega88, and on which CP/M can run. Also, it can be built as a UEFI application that can run on x86_64 platforms without any operating system.
 
 ## Specification
 to be written
@@ -52,8 +52,8 @@ CP/Mega88>b
 A>_
 ```
 
-### As a UEFI application
-If you want, you can run it without any operating systems. Here is how to
+### As an UEFI application
+If you want, you can build it as an UEFI application so to run it without any operating system. Here is how to
 build it on Ubuntu 14.04.
 ```
 % sudo apt-get install gnu-efi
@@ -62,6 +62,8 @@ build it on Ubuntu 14.04.
 You can place a CP/M disk image at EFI/cpmega88/sdcard.img, and run
 cpmega88.efi from UEFI Shell, or boot it directly by e.g., placing it to
 EFI/Boot/bootx64.efi and disabling the Secure Boot.
+
+On Mac, you can also boot it directly by pushing option key on booting.
 
 Here is an example step to create a bootable media.
 ```
@@ -78,6 +80,12 @@ Here is an example step to create a bootable media.
 % sudo umount efi
 % rmdir efi
 ```
+
+If you want to try it on QEMU, here is a step.
+```
+% make -f Makefile.uefi install && make -f Makefile.uefi run
+```
+You need QEMU of course, and will need OVMF.fd that adds UEFI support for QEMU.
 
 You would like the CP/Mega88 auto boot mode that could be enabled by "a on"
 from the monitor. Configuration will be stored to EFI/cpmega/eeprom.img
