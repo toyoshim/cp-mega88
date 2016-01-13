@@ -43,7 +43,8 @@ LDS	= /usr/lib/elf_x86_64_efi.lds
 LDFLAGS	= --warn-common --no-undefined --fatal-warnings -shared -T $(LDS) \
 	-Bsymbolic
 TARGET	= cpmega88
-EFIROOT	= .
+EFIROOT	= EFI
+EFIBIOS = OVMF.fd
 OBJS	= main.o uart.o sram.o sdcard.o fat.o eeprom.o cpu_8080.o
 
 all: $(TARGET).efi
@@ -68,3 +69,6 @@ install:
 	cp $(TARGET).efi $(EFIROOT)/EFI/Boot/bootx64.efi
 	mkdir -p $(EFIROOT)/EFI/cpmega88
 	cp $(TARGET).efi $(EFIROOT)/EFI/cpmega88/
+
+run:
+	qemu-system-x86_64 -bios $(EFIBIOS) -hda fat:rw:$(EFIROOT) -net none

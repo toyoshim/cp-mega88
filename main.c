@@ -104,6 +104,25 @@ static cpu_8080_work work;
 EFI_HANDLE *efi_image;
 EFI_SYSTEM_TABLE *efi_systab;
 EFI_FILE_HANDLE efi_fs;
+
+# if !defined(EFI_CONSOLE_CONTROL_PROTOCOL_GUID)
+// Provides minimum definitions that are sufficient for our use case.
+#  define EFI_CONSOLE_CONTROL_PROTOCOL_GUID \
+  { 0xf42f7782, 0x12e, 0x4c12, {0x99, 0x56, 0x49, 0xf9, 0x43, 0x4, 0xf7, 0x21} }
+EFI_GUID ConsoleControlProtocol = EFI_CONSOLE_CONTROL_PROTOCOL_GUID;
+typedef struct _EFI_CONSOLE_CONTROL_INTERFACE EFI_CONSOLE_CONTROL_INTERFACE;
+typedef enum { EfiConsoleControlScreenText } EFI_CONSOLE_CONTROL_SCREEN_MODE;
+typedef EFI_STATUS
+(EFIAPI *EFI_CONSOLE_CONTROL_PROTOCOL_SET_MODE) (
+  IN  EFI_CONSOLE_CONTROL_INTERFACE   *This,
+  IN  EFI_CONSOLE_CONTROL_SCREEN_MODE Mode
+  );
+struct _EFI_CONSOLE_CONTROL_INTERFACE {
+  VOID *GetMode;
+  EFI_CONSOLE_CONTROL_PROTOCOL_SET_MODE SetMode;
+  VOID *LockStdIn;
+};
+# endif
 #endif
 
 #if defined(TEST)
@@ -249,7 +268,7 @@ strdcmp
 {
   for (;;) {
     if (((0 == *s1) || (s == *s1)) && 
-	((0 == *s2) || (s == *s2))) return 0;
+        ((0 == *s2) || (s == *s2))) return 0;
     if (*s1++ != *s2++) return -1;
   }
 }
@@ -262,7 +281,7 @@ strndcmp
   int i;
   for (i = 0; i < n; i++) {
     if (((0 == *s1) || (s == *s1)) ||
-	((0 == *s2) || (s == *s2))) return -1;
+        ((0 == *s2) || (s == *s2))) return -1;
     if (*s1++ != *s2++) return -1;
   }
   return 0;
@@ -348,10 +367,10 @@ prompt
     } while (c < 0);
     if ((0x08 == c) || (0x7f == c)) {
       if (0 != size) {
-	size--;
-	uart_putchar(0x08);
-	uart_putchar(0x20);
-	uart_putchar(0x08);
+        size--;
+        uart_putchar(0x08);
+        uart_putchar(0x20);
+        uart_putchar(0x08);
       }
     } else if (0x0a == c) {
     } else if (0x0d == c) {
@@ -363,8 +382,8 @@ prompt
       uart_puts(buffer);
     } else {
       if (MAX_PROMPT != size) {
-	buffer[size++] = c;
-	uart_putchar(c);
+        buffer[size++] = c;
+        uart_putchar(c);
       }
     }
   }
@@ -468,10 +487,10 @@ prompt
       if ((rc < '!') || ('~' < rc)) rc = ' ';
       buf[i & 15] = rc;
       if (15 == (i & 15)) {
-	buf[16] = 0;
-	uart_puts(": ");
-	uart_puts(buf);
-	uart_putsln(" ");
+        buf[16] = 0;
+        uart_puts(": ");
+        uart_puts(buf);
+        uart_putsln(" ");
       }
     }
     uart_puts("crc: ");
@@ -725,8 +744,8 @@ mem_chk
 #endif // defined(MSG_MIN)
 #if defined(CHK_MIN)
       if (0 != test) {
-	uart_putnum_u16(addr, 5);
-	uart_puts("/65535\r");
+        uart_putnum_u16(addr, 5);
+        uart_puts("/65535\r");
       }
 #else // defined(CHK_MIN)
       uart_putnum_u16(addr, 5);
@@ -888,12 +907,20 @@ main
   efi_image = image;
   efi_systab = systab;
   EFI_FILE_IO_INTERFACE *efi_fio;
+  EFI_CONSOLE_CONTROL_INTERFACE *efi_cc;
   EFI_STATUS status = uefi_call_wrapper(
       efi_systab->BootServices->LocateProtocol, 3,
       &FileSystemProtocol, NULL, (void**)&efi_fio);
   if (EFI_ERROR(status)) return 0;
   status = uefi_call_wrapper(efi_fio->OpenVolume, 2, efi_fio, &efi_fs);
   if (EFI_ERROR(status)) return 0;
+  status = uefi_call_wrapper(
+      efi_systab->BootServices->LocateProtocol, 3,
+      &ConsoleControlProtocol, NULL, (void**)&efi_cc);
+  if (!EFI_ERROR(status)) {
+    // Switch console mode from graphics to text on Mac.
+    uefi_call_wrapper(efi_cc->SetMode, 2, efi_cc, EfiConsoleControlScreenText);
+  }
 #elif defined(TEST) // defined(EFI)
   setjmp(jb);
 #endif // defined(TEST)
