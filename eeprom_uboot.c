@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Takashi TOYOSHIMA <toyoshim@gmail.com>
+ * Copyright (c) 2016, Takashi TOYOSHIMA <toyoshim@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,18 +29,17 @@
  * DAMAGE.
  */
 
-#if !defined __eeprom_h__
-# define __eeprom_h__
+#include "eeprom.h"
 
-#define EEPROM_SIZE 512
+int
+eeprom_load
+(void *image)
+{
+  return 0;
+}
 
-int eeprom_load(void *image);
-void eeprom_flush(void *image);
-
-void eeprom_write(unsigned short addr, unsigned char data);
-unsigned char eeprom_read(unsigned short addr);
-
-void eeprom_write_string(unsigned short addr, char *str);
-void eeprom_read_string(unsigned short addr, char *str);
-
-#endif // !defined(__eeprom_h__)
+void
+eeprom_flush
+(void *image)
+{
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Takashi TOYOSHIMA <toyoshim@gmail.com>
+ * Copyright (c) 2016, Takashi TOYOSHIMA <toyoshim@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,18 +29,35 @@
  * DAMAGE.
  */
 
-#if !defined __eeprom_h__
-# define __eeprom_h__
+#include "eeprom.h"
+#include <efi.h>
 
-#define EEPROM_SIZE 512
+extern EFI_FILE_HANDLE efi_fs;
+EFI_FILE_HANDLE eep_fp = NULL;
 
-int eeprom_load(void *image);
-void eeprom_flush(void *image);
+int
+eeprom_load
+(void *image)
+{
+  UINT64 mode = EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE | EFI_FILE_MODE_CREATE;
+  EFI_STATUS status = uefi_call_wrapper(
+      efi_fs->Open, 5, efi_fs, &eep_fp, L"EFI\\cpmega88\\eeprom.img", mode, 0);
+  if (!EFI_ERROR(status)) return 0;
+  mode = EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE;
+  status = uefi_call_wrapper(
+      efi_fs->Open, 5, efi_fs, &eep_fp, L"eeprom.img", mode, 0);
+  if (!EFI_ERROR(status)) return 0;
+  UINTN size = EEPROM_SIZE;
+  status = uefi_call_wrapper(eep_fp->Read, 3, eep_fp, &size, image);
+  return EFI_ERROR(status) ? EEPROM_SIZE : 0;
+}
 
-void eeprom_write(unsigned short addr, unsigned char data);
-unsigned char eeprom_read(unsigned short addr);
-
-void eeprom_write_string(unsigned short addr, char *str);
-void eeprom_read_string(unsigned short addr, char *str);
-
-#endif // !defined(__eeprom_h__)
+void
+eeprom_flush
+(void *image)
+{
+  EFI_STATUS status = uefi_call_wrapper(efi_fs->SetPosition, 2, eep_fp, 0);
+  if (EFI_ERROR(status)) return;
+  UINTN size = EEPROM_SIZE;
+  uefi_call_wrapper(eep_fp->Write, 3, eep_fp, &size, image);
+}

@@ -39,8 +39,8 @@ TARGET	= native_client/cpmega88_x86_64.nexe
 
 all: checkout-libs $(TARGET)
 
-OBJS	= main.o uart.o sram.o sdcard.o fat.o eeprom.o cpu_8080.o \
-	native_client/nacl_main.o
+OBJS	= main.o uart.o sram.o sdcard.o fat.o eeprom_base.o eeprom_image.o \
+	  eeprom_posix.o cpu_8080.o native_client/nacl_main.o
 
 checkout-libs: naclfs
 

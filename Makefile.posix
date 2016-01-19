@@ -39,7 +39,8 @@ LDFLAGS	=
 SFLAGS	=
 HFLAGS	= -d2
 TARGET	= cpmega88
-OBJS	= main.o uart.o sram.o sdcard.o fat.o eeprom.o cpu_8080.o
+OBJS	= main.o uart.o sram.o sdcard.o fat.o eeprom_base.o eeprom_image.o \
+	  eeprom_posix.o cpu_8080.o
 
 all: $(TARGET)
 
