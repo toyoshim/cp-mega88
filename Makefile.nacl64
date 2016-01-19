@@ -31,22 +31,21 @@
 
 CC	= x86_64-nacl-gcc
 CXX	= x86_64-nacl-g++
-CFLAGS	= -O0 -g -Wall -m64 -pthread -DTEST -Inaclfs/src
-CXXFLAGS= -O0 -g -Wall -m64 -pthread -Inaclfs/src
-LIBS	= -lppapi -lppapi_cpp
-LDFLAGS	= `./naclfs/bin/naclfs-config --libs`
+FSFLAGS	= `./naclfs/bin/naclfs-config --cflags newlib-x86_64`
+CFLAGS	= -O0 -g -Wall -m64 -pthread -DTEST $(FSFLAGS)
+CXXFLAGS= -O0 -g -Wall -m64 -pthread $(FSFLAGS)
+LDFLAGS	= `./naclfs/bin/naclfs-config --libs newlib-x86_64`
 TARGET	= native_client/cpmega88_x86_64.nexe
 
 all: checkout-libs $(TARGET)
 
 OBJS	= main.o uart.o sram.o sdcard.o fat.o eeprom.o cpu_8080.o \
-	$(shell ./naclfs/bin/naclfs-config --objs naclfs) \
 	native_client/nacl_main.o
 
 checkout-libs: naclfs
 
 naclfs:
-	git clone https://code.google.com/p/naclfs/
+	git clone https://github.com/toyoshim/naclfs.git && cd naclfs && make newlib
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) -o $@ $<
@@ -58,8 +57,8 @@ naclfs:
 	$(CC) -c -o $@ $<
 
 $(TARGET): $(OBJS)
-	$(CXX) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
+	$(CXX) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:
 	(cd naclfs; make clean)
-	rm -rf *.o *.hex *.elf native_client/*.o $(TARGET)
+	rm -rf *.o *.hex *.elf native_client/*.o naclfs $(TARGET)
