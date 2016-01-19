@@ -33,7 +33,9 @@
 #if defined(EFI)
 # include <efi.h>
 #elif defined(TEST) // defined(EFI)
-# include <stdio.h>
+# if !defined(UBOOT)
+#  include <stdio.h>
+# endif // !defined(UBOOT)
 #else // defined(TEST)
 # include <avr/io.h>
 #endif // defined(TEST)
@@ -43,6 +45,7 @@
 # if defined(EFI)
 extern EFI_FILE_HANDLE efi_fs;
 EFI_FILE_HANDLE eep_fp = NULL;
+# elif defined(UBOOT)
 # else // defined(TEST)
 FILE *eep_fp = NULL;
 # endif
@@ -60,6 +63,8 @@ map
   status = uefi_call_wrapper(
       efi_fs->Open, 5, efi_fs, &eep_fp, L"eeprom.img", mode, 0);
   return EFI_ERROR(status) ? -1 : 0;
+#elif defined(UBOOT)
+  return 0;
 #else
   if (NULL != eep_fp) return 0;
   eep_fp = fopen("eeprom.img", "r+");
@@ -81,6 +86,7 @@ eeprom_write
   if (EFI_ERROR(status)) return;
   UINTN size = 1;
   uefi_call_wrapper(eep_fp->Write, 3, eep_fp, &size, &data);
+#elif defined(UBOOT)
 #elif defined(TEST) // defined(EFI)
   if (0 != fseek(eep_fp, addr, SEEK_SET)) return;
   fwrite(&data, 1, 1, eep_fp);
@@ -106,6 +112,8 @@ eeprom_read
   status = uefi_call_wrapper(eep_fp->Read, 3, eep_fp, &size, &data);
   if (EFI_ERROR(status)) return 0xff;
   return data;
+#elif defined(UBOOT)
+  return 0;
 #elif defined(TEST) // defined(EFI)
   if (0 != fseek(eep_fp, addr, SEEK_SET)) return 0xff;
   unsigned char rc;

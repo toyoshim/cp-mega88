@@ -37,23 +37,29 @@
 # if defined(EFI)
 #  include <efi.h>
 # endif
-# include <stdio.h>
-# include <stdlib.h>
-# include <fcntl.h>
-# if !defined(__native_client__)
-#  include <termios.h>
-# endif // !defined(__native_client__)
-# include <signal.h>
-# include <time.h>
+# if defined(UBOOT)
+#  include <ansi.h>
+#  include <common.h>
+#  include <exports.h>
+# else
+#  include <stdio.h>
+#  include <stdlib.h>
+#  include <fcntl.h>
+#  if !defined(__native_client__)
+#   include <termios.h>
+#  endif // !defined(__native_client__)
+#  include <signal.h>
+#  include <time.h>
+# endif // defined(UBOOT)
 #else // defined(TEST)
 # include <avr/io.h>
 # include <avr/interrupt.h>
 #endif // defined(TEST)
 
 #if defined(TEST)
-# if !defined(__native_client__)
+# if !defined(__native_client__) && !defined(UBOOT)
 struct termios org_to;
-# endif // !defined(__native_client__)
+# endif // !defined(__native_client__) && !defined(UBOOT)
 # if defined(EFI)
 extern EFI_SYSTEM_TABLE* efi_systab;
 # endif // defined(EFI)
@@ -133,7 +139,7 @@ ISR
 }
 #endif // !defined(TEST)
 
-#if defined(TEST) && !defined(EFI)
+#if defined(TEST) && !defined(EFI) && !defined(UBOOT)
 void
 uart_term
 (int num)
@@ -144,14 +150,16 @@ uart_term
   fcntl(0, F_SETFL, org_flags);
   exit(0);
 }
-#endif // defined(TEST) && !defined(EFI)
+#endif // defined(TEST) && !defined(EFI) && !defined(UBOOT)
 
 void
 uart_init
 (void)
 {
 #if defined(EFI)
-#elif defined(TEST) // defined(EFI)
+#elif defined(UBOOT) // defined(EFI)
+  printf(ANSI_CLEAR_CONSOLE);
+#elif defined(TEST) // defined(UBOOT)
 # if !defined(__native_client__)
   tcgetattr(0, &org_to);
 # endif // !defined(__native_client__)
@@ -200,9 +208,13 @@ uart_putchar
   s[0] = c;
   s[1] = 0;
   uefi_call_wrapper(efi_systab->ConOut->OutputString, 2, efi_systab->ConOut, s);
-#elif defined(TEST) // defined(EFI)
+#elif defined(UBOOT) // defined(EFI)
+  putc(c);
+#elif defined(TEST) // defined(UBOOT)
   fputc((int)c, stdout);
+# if !defined(UBOOT)
   fflush(stdout);
+# endif // !defined(UBOOT)
   wait_flag = -1;
 #else // defined(TEST)
   disable_int();
@@ -268,6 +280,8 @@ uart_getchar
   uefi_call_wrapper(
       efi_systab->ConIn->ReadKeyStroke, 2, efi_systab->ConIn, &key);
   return key.UnicodeChar;
+#elif defined(UBOOT)
+  return getc();
 #elif defined(TEST) // defined(EFI)
   wait_flag = -1;
   if (-1 == fifo_flag) uart_peek();
@@ -317,7 +331,9 @@ uart_peek
       efi_systab->BootServices->CloseEvent, 1, event[1]);
   if (EFI_ERROR(status) || index == 1) return 0;
   return 1;
-#elif defined(TEST) // defined(EFI)
+#elif defined(UBOOT) // defined(EFI)
+  return tstc();
+#elif defined(TEST) // defined(UBOOT)
 # if !defined(__native_client__)
   if (-1 != wait_flag) {
     struct timespec req;

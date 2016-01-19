@@ -90,6 +90,36 @@ You need QEMU of course, and will need OVMF.fd that adds UEFI support for QEMU.
 You would like the CP/Mega88 auto boot mode that could be enabled by "a on"
 from the monitor. Configuration will be stored to EFI/cpmega/eeprom.img
 
+### As an U-Boot application that runs on AZ/05M
+You can build an U-Boot application that can boot directly without any operating
+system through the U-Boot on Toshiba AZ/05M.
+
+Here is a step to build the bootable image.
+
+```
+% sudo apt-get install gcc-arm-none-eabi  # for debian and variants
+% git clone https://github.com/ac100-ru/u-boot-ac100-exp.git
+% cd u-boot-ac100-exp
+% make paz00_config CROSS_COMPILE=arm-none-eabi-
+% make all CROSS_COMPILE=arm-none-eabi-
+% cd ..
+% git clone https://github.com/toyoshim/cp-mega88.git
+% cd cp-mega88
+% make -f Makefile.uboot
+```
+
+And here is a sequence to boot it from the U-Boot.
+
+```
+# ext2load mmc 0:1 0x0c100000 /boot/cp-mega88.bin
+# ext2load mmc 0:1 0x0c200000 /boot/sdcard.img
+# go 0x0c100000
+```
+
+Note that you need to setup U-Boot correctly so that the AZ/05M boots from the
+U-Boot to choose the system, and this instruction does not cover it.
+You could use bootmenu command to automate the boot sequence.
+
 ### Monitor Commands
 ```
 CP/Mega88>help

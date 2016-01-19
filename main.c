@@ -30,7 +30,9 @@
  */
 
 #if defined(TEST)
-# include <setjmp.h>
+# if !defined(UBOOT)
+#  include <setjmp.h>
+# endif // !defined(UBOOT)
 #else // defined(TEST)
 # include <avr/io.h>
 #endif // !defined(TEST)
@@ -126,7 +128,9 @@ struct _EFI_CONSOLE_CONTROL_INTERFACE {
 #endif
 
 #if defined(TEST)
+# if !defined(UBOOT)
 jmp_buf jb;
+# endif // !defined(UBOOT)
 #else // defined(TEST)
 extern uint8_t _end;
 extern uint8_t __stack;
@@ -139,6 +143,8 @@ reset
 #if defined(EFI)
   uefi_call_wrapper(efi_systab->BootServices->Exit, 3,
                     efi_image, EFI_SUCCESS, 0, NULL);
+#elif defined(UBOOT)
+  for (;;);
 #elif defined(TEST)
   longjmp(jb, 0);
 #else // defined(TEST)
@@ -928,7 +934,9 @@ main
     uefi_call_wrapper(efi_cc->SetMode, 2, efi_cc, EfiConsoleControlScreenText);
   }
 #elif defined(TEST) // defined(EFI)
+# if !defined(UBOOT)
   setjmp(jb);
+# endif // defined(UBOOT)
 #endif // defined(TEST)
   uart_init();
   sram_init();
@@ -941,9 +949,9 @@ main
 #if defined(CLR_MEM)
   mem_clr();
 #endif // defined(CLR_MEM)
-#if defined(MON_MEM) | defined(CHK_MEM)
+#if defined(MON_MEM) || defined(CHK_MEM)
   mem_chk();
-#endif // defined(MON_MEM) | defined(CHK_MEM)
+#endif // defined(MON_MEM) || defined(CHK_MEM)
   char rc = sdcard_open();
   if (rc >= 0) uart_putsln("SDC: ok");
 #if !defined(MSG_MIN)

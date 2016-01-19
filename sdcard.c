@@ -32,6 +32,9 @@
 #include "sdcard.h"
 #if defined(EFI)
 # include <efi.h>
+#elif defined(UBOOT)
+# include <common.h>
+# include <exports.h>
 #elif defined(TEST) // defined(EFI)
 # include <stdio.h>
 #else // defined(TEST)
@@ -59,7 +62,8 @@ cur_blk;
 #if defined(EFI)
 extern EFI_FILE_HANDLE efi_fs;
 EFI_FILE_HANDLE fp = NULL;
-#elif defined(TEST) // defined(EFI)
+#elif defined(UBOOT) // defined(EFI)
+#elif defined(TEST) // defined(UBOOT)
 static FILE *fp = NULL;
 #else // defined(TEST)
 static void
@@ -127,8 +131,8 @@ void
 sdcard_init
 (void)
 {
-#if defined(EFI)
-#elif defined(TEST) // defined(EFI)
+#if defined(EFI) || defined(UBOOT)
+#elif defined(TEST) // defined(EFI) || defined(UBOOT)
   if (NULL != fp) fclose(fp);
   fp = NULL;
 #else // defined(TEST)
@@ -158,7 +162,9 @@ sdcard_open
   status = uefi_call_wrapper(
       efi_fs->Open, 5, efi_fs, &fp, L"sdcard.img", mode, 0);
   return EFI_ERROR(status) ? -1 : 0;
-#elif defined(TEST) // defined(EFI)
+#elif defined(UBOOT)  // defined(EFI)
+  return 0;
+#elif defined(TEST) // defined(UBOOT)
   fp = fopen("sdcard.img", "r+");
   if (NULL == fp) fp = fopen("sdcard.img", "r");
   if (NULL == fp) return -1;
@@ -193,7 +199,9 @@ int
 sdcard_fetch
 (unsigned long blk_addr)
 {
+#if !defined(UBOOT)
   if (NULL == fp) return -1;
+#endif // !defined(UBOOT)
   if (0 != (blk_addr & 0x1ff)) return -2;
 #if defined(EFI)
   EFI_STATUS status = uefi_call_wrapper(fp->SetPosition, 2, fp, blk_addr);
@@ -203,7 +211,15 @@ sdcard_fetch
   if (EFI_ERROR(status) || 512 != size) return -4;
   cur_blk = blk_addr;
   return 0;
-#elif defined(TEST) // defined(EFI)
+#elif defined(UBOOT) // defined(EFI)
+  unsigned char* image = (unsigned char*)SDCARD_IMAGE_BASE;
+  unsigned char* block = &image[blk_addr];
+  size_t i;
+  for (i = 0; i < 512; i++)
+    buffer[i] = block[i];
+  cur_blk = blk_addr;
+  return 0;
+#elif defined(TEST) // defined(UBOOT)
   if (0 != fseek(fp, blk_addr, SEEK_SET)) return -3;
   if (512 != fread(buffer, 1, 512, fp)) return -4;
   cur_blk = blk_addr;
@@ -231,7 +247,9 @@ int
 sdcard_store
 (unsigned long blk_addr)
 {
+#if !defined(UBOOT)
   if (NULL == fp) return -1;
+#endif // !defined(UBOOT)
   if (0 != (blk_addr & 0x1ff)) return -2;
 #if defined(EFI)
   EFI_STATUS status = uefi_call_wrapper(fp->SetPosition, 2, fp, blk_addr);
@@ -240,7 +258,15 @@ sdcard_store
   status = uefi_call_wrapper(fp->Write, 3, fp, &size, buffer);
   if (EFI_ERROR(status) || 512 != size) return -4;
   return 0;
-#elif defined(TEST) // defined(EFI)
+#elif defined(UBOOT) // defined(EFI)
+  unsigned char* image = (unsigned char*)SDCARD_IMAGE_BASE;
+  unsigned char* block = &image[blk_addr];
+  size_t i;
+  // Just copy back to the original place. The data couldn't be persistent.
+  for (i = 0; i < 512; i++)
+    block[i] = buffer[i];
+  return 0;
+#elif defined(TEST) // defined(UBOOT)
   if (0 != fseek(fp, blk_addr, SEEK_SET)) return -3;
   if (512 != fwrite(buffer, 1, 512, fp)) return -4;
   return 0;
