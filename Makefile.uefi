@@ -62,7 +62,7 @@ $(TARGET).so: $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 clean:
-	rm -rf *.o *.so $(TARGET) $(EFIROOT)/EFI
+	rm -rf *.o $(TARGET).so $(TARGET).efi $(EFIROOT)/EFI
 
 install:
 	mkdir -p $(EFIROOT)/EFI/Boot
