@@ -39,8 +39,9 @@ TARGET	= native_client/cpmega88_x86_32.nexe
 
 all: checkout-libs $(TARGET)
 
-OBJS	= main.o uart.o sram.o sdcard.o fat.o eeprom_base.o eeprom_image.o \
-	  eeprom_posix.o cpu_8080.o native_client/nacl_main.o
+OBJS	= main.o uart.o sram.o sdcard_base.o sdcard_posix.o fat.o \
+	  eeprom_base.o eeprom_image.o eeprom_posix.o cpu_8080.o \
+	  native_client/nacl_main.o
 
 checkout-libs: naclfs
 
@@ -60,5 +61,7 @@ $(TARGET): $(OBJS)
 	$(CXX) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:
-	(cd naclfs; make clean)
-	rm -rf *.o *.hex *.elf native_client/*.o naclfs $(TARGET)
+	rm -rf *.o *.hex *.elf native_client/*.o $(TARGET)
+
+dist-clean: clean
+	rm -rf naclfs

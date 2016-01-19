@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Takashi TOYOSHIMA <toyoshim@gmail.com>
+ * Copyright (c) 2016, Takashi TOYOSHIMA <toyoshim@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,17 +29,20 @@
  * DAMAGE.
  */
 
-#if !defined __sdcard_h__
-# define __sdcard_h__
+#include "sdcard.h"
 
-void sdcard_init(void);
-int sdcard_open(void);
-int sdcard_fetch(unsigned long blk_addr);
-int sdcard_store(unsigned long blk_addr);
-unsigned short sdcard_crc(void);
-int sdcard_flush(void);
-void *sdcard_buffer(void);
-unsigned char sdcard_read(unsigned short offset);
-void sdcard_write(unsigned short offset, unsigned char data);
+unsigned char
+sdcard_read
+(unsigned short offset)
+{
+  unsigned char* buffer = sdcard_buffer();
+  return buffer[offset];
+}
 
-#endif // !defined(__sdcard_h__)
+void
+sdcard_write
+(unsigned short offset, unsigned char data)
+{
+  unsigned char* buffer = sdcard_buffer();
+  buffer[offset] = data;
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Takashi TOYOSHIMA <toyoshim@gmail.com>
+ * Copyright (c) 2016, Takashi TOYOSHIMA <toyoshim@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,16 +30,8 @@
  */
 
 #include "sdcard.h"
-#if defined(EFI)
-# include <efi.h>
-#elif defined(UBOOT)
-# include <common.h>
-# include <exports.h>
-#elif defined(TEST) // defined(EFI)
-# include <stdio.h>
-#else // defined(TEST)
-# include <avr/io.h>
-#endif // defined(TEST)
+
+#include <avr/io.h>
 
 #define PORT PORTC
 #define DDR  DDRC
@@ -54,18 +46,11 @@ static unsigned char
 buffer[512];
 
 static unsigned short
-crc;
+crc = 0xffff;
 
 static unsigned long
-cur_blk;
+cur_blk = 0;
 
-#if defined(EFI)
-extern EFI_FILE_HANDLE efi_fs;
-EFI_FILE_HANDLE fp = NULL;
-#elif defined(UBOOT) // defined(EFI)
-#elif defined(TEST) // defined(UBOOT)
-static FILE *fp = NULL;
-#else // defined(TEST)
 static void
 sd_out
 (char c)
@@ -125,17 +110,11 @@ sd_cmd
   if (sd_busy(0) < 0) return -1;
   return sd_in(7);
 }
-#endif // defined(TEST)
 
 void
 sdcard_init
 (void)
 {
-#if defined(EFI) || defined(UBOOT)
-#elif defined(TEST) // defined(EFI) || defined(UBOOT)
-  if (NULL != fp) fclose(fp);
-  fp = NULL;
-#else // defined(TEST)
   /*
    * PC2: CK out
    * PC3: DI out
@@ -147,29 +126,13 @@ sdcard_init
   DDR  |=  (P_CK | P_DI | P_CS);
   PORT &= ~(P_CK | P_DI | P_CS);
   PORT |=  P_PU;
-#endif // defined(TEST)
+  cur_blk = 0;
 }
 
 int
 sdcard_open
 (void)
 {
-#if defined(EFI)
-  UINT64 mode = EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE;
-  EFI_STATUS status = uefi_call_wrapper(
-      efi_fs->Open, 5, efi_fs, &fp, L"EFI\\cpmega88\\sdcard.img", mode, 0);
-  if (!EFI_ERROR(status)) return 0;
-  status = uefi_call_wrapper(
-      efi_fs->Open, 5, efi_fs, &fp, L"sdcard.img", mode, 0);
-  return EFI_ERROR(status) ? -1 : 0;
-#elif defined(UBOOT)  // defined(EFI)
-  return 0;
-#elif defined(TEST) // defined(UBOOT)
-  fp = fopen("sdcard.img", "r+");
-  if (NULL == fp) fp = fopen("sdcard.img", "r");
-  if (NULL == fp) return -1;
-  return 0;
-#else // defined(TEST)
   // initial clock
   PORT |= P_DI | P_CS;
   int i;
@@ -192,39 +155,12 @@ sdcard_open
 
   PORT &= ~P_CK;
   return 0;
-#endif // defined(TEST)
 }
 
 int
 sdcard_fetch
 (unsigned long blk_addr)
 {
-#if !defined(UBOOT) && defined(TEST)
-  if (NULL == fp) return -1;
-#endif // !defined(UBOOT)
-  if (0 != (blk_addr & 0x1ff)) return -2;
-#if defined(EFI)
-  EFI_STATUS status = uefi_call_wrapper(fp->SetPosition, 2, fp, blk_addr);
-  if (EFI_ERROR(status)) return -3;
-  UINTN size = 512;
-  status = uefi_call_wrapper(fp->Read, 3, fp, &size, buffer);
-  if (EFI_ERROR(status) || 512 != size) return -4;
-  cur_blk = blk_addr;
-  return 0;
-#elif defined(UBOOT) // defined(EFI)
-  unsigned char* image = (unsigned char*)SDCARD_IMAGE_BASE;
-  unsigned char* block = &image[blk_addr];
-  size_t i;
-  for (i = 0; i < 512; i++)
-    buffer[i] = block[i];
-  cur_blk = blk_addr;
-  return 0;
-#elif defined(TEST) // defined(UBOOT)
-  if (0 != fseek(fp, blk_addr, SEEK_SET)) return -3;
-  if (512 != fread(buffer, 1, 512, fp)) return -4;
-  cur_blk = blk_addr;
-  return 0;
-#else // defined(TEST)
   // cmd17
   char rc = sd_cmd(0x51, blk_addr >> 24, blk_addr >> 16, blk_addr >> 8, blk_addr, 0x00);
   if (0 != rc) return -1;
@@ -240,37 +176,12 @@ sdcard_fetch
 
   cur_blk = blk_addr;
   return 0;
-#endif // defined(TEST)
 }
 
 int
 sdcard_store
 (unsigned long blk_addr)
 {
-#if !defined(UBOOT) & defined(TEST)
-  if (NULL == fp) return -1;
-#endif // !defined(UBOOT)
-  if (0 != (blk_addr & 0x1ff)) return -2;
-#if defined(EFI)
-  EFI_STATUS status = uefi_call_wrapper(fp->SetPosition, 2, fp, blk_addr);
-  if (EFI_ERROR(status)) return -3;
-  UINTN size = 512;
-  status = uefi_call_wrapper(fp->Write, 3, fp, &size, buffer);
-  if (EFI_ERROR(status) || 512 != size) return -4;
-  return 0;
-#elif defined(UBOOT) // defined(EFI)
-  unsigned char* image = (unsigned char*)SDCARD_IMAGE_BASE;
-  unsigned char* block = &image[blk_addr];
-  size_t i;
-  // Just copy back to the original place. The data couldn't be persistent.
-  for (i = 0; i < 512; i++)
-    block[i] = buffer[i];
-  return 0;
-#elif defined(TEST) // defined(UBOOT)
-  if (0 != fseek(fp, blk_addr, SEEK_SET)) return -3;
-  if (512 != fwrite(buffer, 1, 512, fp)) return -4;
-  return 0;
-#else // defined(TEST)
   // cmd24
   char rc = sd_cmd(0x58, blk_addr >> 24, blk_addr >> 16, blk_addr >> 8, blk_addr, 0x00);
   if (0 != rc) return -1;
@@ -292,21 +203,6 @@ sdcard_store
   PORT &= ~P_CK;
 
   return rc; // test result code
-#endif // defined(TEST)
-}
-
-unsigned char
-sdcard_read
-(unsigned short offset)
-{
-  return buffer[offset];
-}
-
-void
-sdcard_write
-(unsigned short offset, unsigned char data)
-{
-  buffer[offset] = data;
 }
 
 unsigned short
@@ -321,4 +217,11 @@ sdcard_flush
 (void)
 {
   return sdcard_store(cur_blk);
+}
+
+void *
+sdcard_buffer
+(void)
+{
+  return buffer;
 }

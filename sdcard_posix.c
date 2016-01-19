@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Takashi TOYOSHIMA <toyoshim@gmail.com>
+ * Copyright (c) 2016, Takashi TOYOSHIMA <toyoshim@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,17 +29,80 @@
  * DAMAGE.
  */
 
-#if !defined __sdcard_h__
-# define __sdcard_h__
+#include "sdcard.h"
 
-void sdcard_init(void);
-int sdcard_open(void);
-int sdcard_fetch(unsigned long blk_addr);
-int sdcard_store(unsigned long blk_addr);
-unsigned short sdcard_crc(void);
-int sdcard_flush(void);
-void *sdcard_buffer(void);
-unsigned char sdcard_read(unsigned short offset);
-void sdcard_write(unsigned short offset, unsigned char data);
+#include <stdio.h>
 
-#endif // !defined(__sdcard_h__)
+static unsigned char
+buffer[512];
+
+static const unsigned short
+crc = 0xffff;
+
+static unsigned long
+cur_blk = 0;
+
+static FILE *fp = NULL;
+
+void
+sdcard_init
+(void)
+{
+  if (NULL != fp) fclose(fp);
+  fp = NULL;
+  cur_blk = 0;
+}
+
+int
+sdcard_open
+(void)
+{
+  fp = fopen("sdcard.img", "r+");
+  if (NULL == fp) fp = fopen("sdcard.img", "r");
+  if (NULL == fp) return -1;
+  return 0;
+}
+
+int
+sdcard_fetch
+(unsigned long blk_addr)
+{
+  if (NULL == fp) return -1;
+  if (0 != (blk_addr & 0x1ff)) return -2;
+  if (0 != fseek(fp, blk_addr, SEEK_SET)) return -3;
+  if (512 != fread(buffer, 1, 512, fp)) return -4;
+  cur_blk = blk_addr;
+  return 0;
+}
+
+int
+sdcard_store
+(unsigned long blk_addr)
+{
+  if (NULL == fp) return -1;
+  if (0 != (blk_addr & 0x1ff)) return -2;
+  if (0 != fseek(fp, blk_addr, SEEK_SET)) return -3;
+  if (512 != fwrite(buffer, 1, 512, fp)) return -4;
+  return 0;
+}
+
+unsigned short
+sdcard_crc
+(void)
+{
+  return crc;
+}
+
+int
+sdcard_flush
+(void)
+{
+  return sdcard_store(cur_blk);
+}
+
+void *
+sdcard_buffer
+(void)
+{
+  return buffer;
+}
