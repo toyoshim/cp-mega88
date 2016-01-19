@@ -80,7 +80,9 @@ void
 eeprom_write
 (unsigned short addr, unsigned char data)
 {
+#if defined(TEST)
   if (0 != map()) return;
+#endif
 #if defined(EFI)
   EFI_STATUS status = uefi_call_wrapper(efi_fs->SetPosition, 2, eep_fp, addr);
   if (EFI_ERROR(status)) return;
@@ -103,7 +105,9 @@ unsigned char
 eeprom_read
 (unsigned short addr)
 {
+#if defined(TEST)
   if (0 != map()) return 0xff;
+#endif
 #if defined(EFI)
   EFI_STATUS status = uefi_call_wrapper(efi_fs->SetPosition, 2, eep_fp, addr);
   if (EFI_ERROR(status)) return 0xff;

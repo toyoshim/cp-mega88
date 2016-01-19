@@ -199,7 +199,7 @@ int
 sdcard_fetch
 (unsigned long blk_addr)
 {
-#if !defined(UBOOT)
+#if !defined(UBOOT) && defined(TEST)
   if (NULL == fp) return -1;
 #endif // !defined(UBOOT)
   if (0 != (blk_addr & 0x1ff)) return -2;
@@ -247,7 +247,7 @@ int
 sdcard_store
 (unsigned long blk_addr)
 {
-#if !defined(UBOOT)
+#if !defined(UBOOT) & defined(TEST)
   if (NULL == fp) return -1;
 #endif // !defined(UBOOT)
   if (0 != (blk_addr & 0x1ff)) return -2;

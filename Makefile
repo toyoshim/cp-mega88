@@ -29,7 +29,7 @@
 # DAMAGE.
 #
 
-CC	= avr-gcc-3.4.6
+CC	= avr-gcc
 #CC	= avr-gcc
 OBJCOPY	= avr-objcopy
 OBJDUMP	= avr-objdump
