@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Takashi TOYOSHIMA <toyoshim@gmail.com>
+ * Copyright (c) 2016, Takashi TOYOSHIMA <toyoshim@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,35 +30,13 @@
  */
 
 #include "sram.h"
-#if !defined(TEST)
-# include <avr/io.h>
-#endif // !defined(TEST)
 
-#if defined(TEST)
-static unsigned char
-sram[64 * 1024];
-
-unsigned char
-sram_read
-(unsigned short addr)
-{
-  return sram[addr];
-}
-
-void
-sram_write
-(unsigned short addr, unsigned char data)
-{
-  sram[addr] = data;
-}
-
-#endif // defined(TEST)
+#include <avr/io.h>
 
 void
 sram_init
 (void)
 {
-#if !defined(TEST)
   /*
    * PB0: /W
    * PB1: E2
@@ -74,5 +52,4 @@ sram_init
   PORTB   = 0;
   DDRD    = 0xff;
   PORTD   = 0;
-#endif // !defined(TEST)
 }
