@@ -104,6 +104,16 @@ third_party:
 run_uefi: uefi third_party/OVMF.fd third_party/z80pack-1.27
 	make -C obj.uefi -f ../makefiles/Makefile.uefi run
 
+install_packages: third_party
+	sudo apt-get update && \
+	sudo apt-get install avr-libc device-tree-compiler gcc \
+		gcc-arm-none-eabi gcc-avr git gnu-efi libc6-i386 make python unzip wget && \
+	cd third_party && \
+	wget https://storage.googleapis.com/nativeclient-mirror/nacl/nacl_sdk/nacl_sdk.zip && \
+	unzip nacl_sdk.zip && \
+	cd nacl_sdk && \
+	./naclsdk install pepper_47
+
 distclean: clean
 	rm -rf third_party
 
