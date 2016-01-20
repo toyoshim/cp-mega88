@@ -46,7 +46,7 @@
 
 #include "naclfs.h"
 
-extern "C" int nacl_main(void);
+#include "platform.h"
 
 class CpMega88Instance : public pp::Instance {
 public:
@@ -106,7 +106,7 @@ public:
 
   static void* ThreadMain(void* param) {
     puts("OK");
-    nacl_main();
+    platform_main();
     return NULL;
   }
 

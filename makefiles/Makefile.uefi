@@ -45,9 +45,9 @@ LDFLAGS	= --warn-common --no-undefined --fatal-warnings -shared -T $(LDS) \
 TARGET	= cpmega88
 EFIROOT	= fat
 EFIBIOS = ../third_party/OVMF.fd
-OBJS	= platform.o uart_base.o uart_uefi.o sram_base.o sdcard_base.o \
-	  sdcard_uefi.o fat.o eeprom_base.o eeprom_image.o eeprom_uefi.o \
-	  cpu_8080.o
+OBJS	= main_uefi.o platform.o uart_base.o uart_uefi.o sram_base.o \
+	  sdcard_base.o sdcard_uefi.o fat.o eeprom_base.o eeprom_image.o \
+	  eeprom_uefi.o cpu_8080.o
 
 all: $(TARGET).efi
 
