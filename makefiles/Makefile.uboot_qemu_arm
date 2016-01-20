@@ -29,22 +29,26 @@
 # DAMAGE.
 #
 
-# Make an u-boot application that can boot on Toshiba AZ/05M.
+# Make an u-boot application that can boot on qemu-system-arc -M versatilepb
+# $(UBOOT) should point to a checkout of https://github.com/toyoshim/u-boot.
+# % sudo qemu-system-arm -M versatilepb -m 256M -nographic \
+# > -net nic -net tap -kernel u-boot.bin
+# Versatile # tftp 0x0c200000 sdcard.img
+# Versatile # tftp 0x0c100000 cpmega88.bin
+# Versatile # go 0x0c100000
 CC	= arm-none-eabi-gcc
 OBJCOPY	= arm-none-eabi-objcopy
 LD	= arm-none-eabi-ld.bfd
 LIBPATH	= `$(CC) -print-search-dirs | grep '^install' | cut -d ' ' -f 2`
 LIBGCC	= `$(CC) -print-libgcc-file-name`
-INCS	= -I$(UBOOT)/include -nostdinc -isystem $(LIBPATH)/include
+INCS	= -I$(UBOOT)/include -I$(UBOOT)/arch/arm/include -nostdinc \
+	  -isystem $(LIBPATH)/include -include $(UBOOT)/include/linux/kconfig.h
 DEFS	= -DUBOOT -D__KERNEL__ -D__ARM__ \
-	  -DCONFIG_SYS_TEXT_BASE=0x0010E000 \
-	  -DCONFIG_SPL_TEXT_BASE=0x00108000 \
-	  -DCONFIG_SPL_PAD_TO=0 \
 	  -DCONFIG_ARM \
 	  -DTEST -DTEXT_BASE=0x0c100000 -DSDCARD_IMAGE_BASE=0x0c200000
 MFLAGS	= -msoft-float -marm -mno-thumb-interwork -mabi=aapcs-linux \
-	  -march=armv7-a
-FFLAGS	= -ffunction-sections -fdata-sections -ffixed-r8 -ffreestanding \
+	  -march=armv5te
+FFLAGS	= -ffunction-sections -fdata-sections -ffixed-r9 -ffreestanding \
 	  -fstack-usage -fno-common -fno-builtin -fno-stack-protector \
 	  -fno-toplevel-reorder
 WFLAGS	= -Wall -Wstrict-prototypes -Wno-format-nonliteral -Wno-format-security
@@ -54,7 +58,7 @@ TARGET	= cpmega88
 OBJS	= platform_uboot.o machine.o uart_base.o uart_uboot.o sram_base.o \
 	  sdcard_base.o sdcard_uboot.o fat.o eeprom_base.o eeprom_image.o \
 	  eeprom_uboot.o cpu_8080.o
-UBOOT	= ../third_party/u-boot-ac100-exp
+UBOOT	= ../third_party/u-boot
 
 all: $(TARGET).srec $(TARGET).bin
 
