@@ -32,7 +32,7 @@
 CC	= gcc
 CFLAGS	= -O0 -Wall -DTEST
 TARGET	= cpmega88
-OBJS	= main.o uart_base.o uart_posix.o sram_base.o sdcard_base.o \
+OBJS	= platform.o uart_base.o uart_posix.o sram_base.o sdcard_base.o \
 	  sdcard_posix.o fat.o eeprom_base.o eeprom_image.o eeprom_posix.o \
 	  cpu_8080.o
 
