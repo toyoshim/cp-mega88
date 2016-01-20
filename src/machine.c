@@ -875,7 +875,7 @@ in
 }
 
 int
-platform_main
+machine_boot
 (void)
 {
 #if defined(TEST) && !defined(UBOOT) && !defined(EFI)

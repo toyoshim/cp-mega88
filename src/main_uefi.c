@@ -32,7 +32,7 @@
 #include <efi/efi.h>
 #include <efi/efilib.h>
 
-#include "platform.h"
+#include "machine.h"
 
 EFI_HANDLE *efi_image;
 EFI_SYSTEM_TABLE *efi_systab;
@@ -84,6 +84,6 @@ efi_main
     // Switch console mode from graphics to text on Mac.
     uefi_call_wrapper(efi_cc->SetMode, 2, efi_cc, EfiConsoleControlScreenText);
   }
-  platform_main();
+  machine_boot();
   return 0;
 }

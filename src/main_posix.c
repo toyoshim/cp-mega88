@@ -29,12 +29,12 @@
  * DAMAGE.
  */
 
-#include "platform.h"
+#include "machine.h"
 
 int
 main
 (int argc, char **argv)
 {
-  platform_main();
+  machine_boot();
   return 0;
 }

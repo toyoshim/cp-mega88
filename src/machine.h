@@ -36,7 +36,7 @@
 extern "C" {
 #endif // defined (__cplusplus)
 
-void platform_main(void);
+void machine_boot(void);
 
 #if defined (__cplusplus)
 };
