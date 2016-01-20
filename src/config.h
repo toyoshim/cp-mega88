@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Takashi TOYOSHIMA <toyoshim@gmail.com>
+ * Copyright (c) 2016, Takashi TOYOSHIMA <toyoshim@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,18 +29,42 @@
  * DAMAGE.
  */
 
-#if !defined(__eeprom_h__)
-# define __eeprom_h__
+#if !defined(__config_h__)
+# define __config_h__
 
-#define EEPROM_SIZE 512
+# if defined(TEST)
+#  define CPU_EMU_C
+#  define USE_FAT
+//#  define MSG_MIN
+//#  define CLR_MEM
+#  define CHK_MEM
+//#  define CHK_MIN
+#  define MONITOR
+#  define  MON_MEM
+#  define  MON_SDC
+#  define  MON_FAT
+#  define  MON_CON
+#  define  MON_HELP
+# else // defined(TEST)
+#  define CPU_EMU_A
+//#  define CPM_DEBUG
+#  define USE_FAT
+#  define MSG_MIN
+//#  define CLR_MEM
+#  define CHK_MEM
+#  define CHK_MIN
+#  define MONITOR
+//#  define  MON_MEM
+//#  define  MON_SDC
+#  define  MON_FAT
+#  define  MON_CON
+#  define  MON_HELP
+# endif // defined(TEST)
 
-int eeprom_load(void *image);
-void eeprom_flush(void *image);
+# define MAX_PROMPT 16
 
-void eeprom_write(unsigned short addr, unsigned char data);
-unsigned char eeprom_read(unsigned short addr);
+# if !defined(NULL)
+#  define NULL ((void*)0)
+# endif // !defined(NULL)
 
-void eeprom_write_string(unsigned short addr, char *str);
-void eeprom_read_string(unsigned short addr, char *str);
-
-#endif // !defined(__eeprom_h__)
+#endif // !defined(__config_h__)

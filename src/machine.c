@@ -45,50 +45,13 @@
 #include "sdcard.h"
 #include "fat.h"
 #include "eeprom.h"
-
-#if defined(TEST)
-# define CPU_EMU_C
-# define USE_FAT
-//# define MSG_MIN
-# define CHK_MEM
-# define MONITOR
-# define  MON_MEM
-# define  MON_SDC
-# define  MON_FAT
-# define  MON_CON
-# define  MON_HELP
-#else // defined(TEST)
-# define CPU_EMU_A
-
-//# define CPM_DEBUG
-
-# define USE_FAT
-
-# define MSG_MIN
-
-//# define CLR_MEM
-# define CHK_MEM
-# define  CHK_MIN
-
-# define MONITOR
-//# define  MON_MEM
-//# define  MON_SDC
-# define  MON_FAT
-# define  MON_CON
-# define  MON_HELP
-#endif // defined(TEST)
+#include "config.h"
 
 #if defined(CPU_EMU_C)
 # include "cpu_8080.h"
 #else // if defined(CPU_EMU_A)
 # include "i8080.h"
 #endif // defined(CPU_EMU_C)
-
-#define MAX_PROMPT 16
-
-#if !defined(NULL)
-# define NULL ((void*)0)
-#endif // !defined(NULL)
 
 static char wr_prt = 0;
 #if defined(EFI)

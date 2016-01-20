@@ -29,8 +29,8 @@
  * DAMAGE.
  */
 
-#if !defined __platform_h__
-# define __platform_h__
+#if !defined(__machine_h__)
+# define __machine_h__
 
 #if defined (__cplusplus)
 extern "C" {
@@ -42,4 +42,4 @@ void machine_boot(void);
 };
 #endif // defined (__cplusplus)
 
-#endif // !defined(__platform_h__)
+#endif // !defined(__machine_h__)

@@ -29,7 +29,7 @@
  * DAMAGE.
  */
 
-#if !defined __sdcard_h__
+#if !defined(__sdcard_h__)
 # define __sdcard_h__
 
 void sdcard_init(void);

@@ -29,7 +29,7 @@
  * DAMAGE.
  */
 
-#if !defined __i8080_h__
+#if !defined(__i8080_h__)
 # define __i8080_h__
 
 struct i8080_work {

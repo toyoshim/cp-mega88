@@ -29,7 +29,7 @@
  * DAMAGE.
  */
 
-#if !defined __uart_h__
+#if !defined(__uart_h__)
 # define __uart_h__
 
 void uart_init(void);

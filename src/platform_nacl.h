@@ -29,7 +29,7 @@
  * DAMAGE.
  */
 
-#if !defined __platform_nacl_h__
+#if !defined(__platform_nacl_h__)
 # define __platform_nacl_h__
 
 # if defined(__cplusplus)

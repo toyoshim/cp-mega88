@@ -29,7 +29,7 @@
  * DAMAGE.
  */
 
-#if !defined __fat_h__
+#if !defined(__fat_h__)
 # define __fat_h__
 
 int fat_init(void);

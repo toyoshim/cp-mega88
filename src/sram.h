@@ -29,7 +29,7 @@
  * DAMAGE.
  */
 
-#if !defined __sram_h__
+#if !defined(__sram_h__)
 # define __sram_h__
 
 void sram_init(void);
