@@ -51,8 +51,9 @@ WFLAGS	= -Wall -Wstrict-prototypes -Wno-format-nonliteral -Wno-format-security
 CFLAGS	= -g -Os -fsigned-char $(INCS) $(DEFS) $(MFLAGS) $(FFLAGS) $(WFLAGS)
 LDFLAGS	= -g -Ttext 0x0c100000
 TARGET	= cpmega88
-OBJS	= main.o uart.o sram_base.o sdcard_base.o sdcard_uboot.o fat.o \
-	  eeprom_base.o eeprom_image.o eeprom_uboot.o cpu_8080.o
+OBJS	= main.o uart_base.o uart_uboot.o sram_base.o sdcard_base.o \
+	  sdcard_uboot.o fat.o eeprom_base.o eeprom_image.o eeprom_uboot.o \
+	  cpu_8080.o
 UBOOT	= ../u-boot-ac100-exp
 
 all: $(TARGET).srec $(TARGET).bin

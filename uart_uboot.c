@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Takashi TOYOSHIMA <toyoshim@gmail.com>
+ * Copyright (c) 2016, Takashi TOYOSHIMA <toyoshim@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,16 +29,36 @@
  * DAMAGE.
  */
 
-#if !defined __uart_h__
-# define __uart_h__
+#include "uart.h"
 
-void uart_init(void);
-void uart_putchar(unsigned char c);
-int uart_getchar(void);
-int uart_peek(void);
-void uart_puthex(unsigned char c);
-void uart_putnum_u16(unsigned short n, int digit);
-void uart_puts(char *s);
-void uart_putsln(char *s);
+#include <ansi.h>
+#include <common.h>
+#include <exports.h>
 
-#endif // !defined(__uart_h__)
+void
+uart_init
+(void)
+{
+  printf(ANSI_CLEAR_CONSOLE);
+}
+
+void
+uart_putchar
+(unsigned char c)
+{
+  putc(c);
+}
+
+int
+uart_getchar
+(void)
+{
+  return getc();
+}
+
+int
+uart_peek
+(void)
+{
+  return tstc();
+}

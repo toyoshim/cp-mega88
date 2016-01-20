@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Takashi TOYOSHIMA <toyoshim@gmail.com>
+ * Copyright (c) 2016, Takashi TOYOSHIMA <toyoshim@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,16 +29,63 @@
  * DAMAGE.
  */
 
-#if !defined __uart_h__
-# define __uart_h__
+#include "uart.h"
 
-void uart_init(void);
-void uart_putchar(unsigned char c);
-int uart_getchar(void);
-int uart_peek(void);
-void uart_puthex(unsigned char c);
-void uart_putnum_u16(unsigned short n, int digit);
-void uart_puts(char *s);
-void uart_putsln(char *s);
+#include <efi.h>
+#include <wchar.h>
 
-#endif // !defined(__uart_h__)
+extern EFI_SYSTEM_TABLE* efi_systab;
+
+void
+uart_init
+(void)
+{
+}
+
+void
+uart_putchar
+(unsigned char c)
+{
+  wchar_t s[2];
+  s[0] = c;
+  s[1] = 0;
+  uefi_call_wrapper(efi_systab->ConOut->OutputString, 2, efi_systab->ConOut, s);
+}
+
+int
+uart_getchar
+(void)
+{
+  EFI_EVENT event[1];
+  UINTN index;
+  EFI_INPUT_KEY key;
+  event[0] = efi_systab->ConIn->WaitForKey;
+  uefi_call_wrapper(
+      efi_systab->BootServices->WaitForEvent, 3, 1, event, &index);
+  uefi_call_wrapper(
+      efi_systab->ConIn->ReadKeyStroke, 2, efi_systab->ConIn, &key);
+  return key.UnicodeChar;
+}
+
+int
+uart_peek
+(void)
+{
+  EFI_EVENT event[2];
+  UINTN index;
+  event[0] = efi_systab->ConIn->WaitForKey;
+  EFI_STATUS status = uefi_call_wrapper(
+      efi_systab->BootServices->CreateEvent, 5,
+      EVT_TIMER, 0, NULL, NULL, &event[1]);
+  if (EFI_ERROR(status)) return 0;
+  status = uefi_call_wrapper(
+      efi_systab->BootServices->SetTimer, 3, event[1], TimerRelative, 0);
+  if (!EFI_ERROR(status)) {
+    status = uefi_call_wrapper(
+        efi_systab->BootServices->WaitForEvent, 3, 2, event, &index);
+  }
+  uefi_call_wrapper(
+      efi_systab->BootServices->CloseEvent, 1, event[1]);
+  if (EFI_ERROR(status) || index == 1) return 0;
+  return 1;
+}
