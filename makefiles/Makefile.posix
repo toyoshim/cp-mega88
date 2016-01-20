@@ -38,7 +38,7 @@ OBJS	= main.o uart_base.o uart_posix.o sram_base.o sdcard_base.o \
 
 all: $(TARGET)
 
-%.o: ../%.c
+%.o: ../src/%.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 
 $(TARGET): $(OBJS)

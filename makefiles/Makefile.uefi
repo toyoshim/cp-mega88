@@ -57,7 +57,7 @@ $(TARGET).efi: $(TARGET).so
 		-j .rel\* -j .rela\* -j .reloc \
 		--target efi-app-x86_64 $< $@
 
-%.o: ../%.c
+%.o: ../src/%.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 
 $(TARGET).so: $(OBJS)

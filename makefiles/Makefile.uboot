@@ -70,5 +70,5 @@ $(TARGET).elf: $(OBJS) libstubs.o
 libstubs.o: $(UBOOT)/examples/standalone/stubs.o
 	$(LD) -r -o $@ $<
 
-%.o: ../%.c
+%.o: ../src/%.c
 	$(CC) -c $(CFLAGS) -o $@ $<

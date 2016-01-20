@@ -32,7 +32,7 @@
 CC	= i686-nacl-gcc
 CXX	= i686-nacl-g++
 FSFLAGS	= `../third_party/naclfs/bin/naclfs-config --cflags newlib-i686`
-CFLAGS	= -O0 -g -Wall -m32 -pthread -DTEST $(FSFLAGS)
+CFLAGS	= -O0 -g -Wall -m32 -pthread -DTEST -I.. $(FSFLAGS)
 CXXFLAGS= -O0 -g -Wall -m32 -pthread $(FSFLAGS)
 LDFLAGS	= `../third_party/naclfs/bin/naclfs-config --libs newlib-i686`
 TARGET	= ../native_client/cpmega88_x86_32.nexe
@@ -43,7 +43,7 @@ OBJS	= main.o uart_base.o uart_posix.o sram_base.o sdcard_base.o \
 	  sdcard_posix.o fat.o eeprom_base.o eeprom_image.o eeprom_posix.o \
 	  cpu_8080.o nacl_main.o
 
-%.o: ../%.c
+%.o: ../src/%.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 
 %.o: ../native_client/%.cc
