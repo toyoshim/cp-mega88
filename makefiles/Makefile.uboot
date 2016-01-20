@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2010, Takashi TOYOSHIMA <toyoshim@gmail.com>
+# Copyright (c) 2016, Takashi TOYOSHIMA <toyoshim@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,51 +29,46 @@
 # DAMAGE.
 #
 
-CC	= avr-gcc
-OBJCOPY	= avr-objcopy
-OBJDUMP	= avr-objdump
-SIZE	= avr-size
-HIDSPX	= hidspx
-MCU	= atmega88
-CFLAGS	= -Os -Wall -mmcu=$(MCU) -mtiny-stack
-LIBS	=
-LDFLAGS	=
-SFLAGS	= --mcu=$(MPU)
-HFLAGS	= -d2
+# Make an u-boot application that can boot on Toshiba AZ/05M.
+CC	= arm-none-eabi-gcc
+OBJCOPY	= arm-none-eabi-objcopy
+LD	= arm-none-eabi-ld.bfd
+LIBPATH	= `$(CC) -print-search-dirs | grep '^install' | cut -d ' ' -f 2`
+LIBGCC	= `$(CC) -print-libgcc-file-name`
+INCS	= -I$(UBOOT)/include -nostdinc -isystem $(LIBPATH)/include
+DEFS	= -DUBOOT -D__KERNEL__ -D__ARM__ \
+	  -DCONFIG_SYS_TEXT_BASE=0x0010E000 \
+	  -DCONFIG_SPL_TEXT_BASE=0x00108000 \
+	  -DCONFIG_SPL_PAD_TO=0 \
+	  -DCONFIG_ARM \
+	  -DTEST -DSDCARD_IMAGE_BASE=0x0c200000
+MFLAGS	= -msoft-float -marm -mno-thumb-interwork -mabi=aapcs-linux \
+	  -march=armv7-a
+FFLAGS	= -ffunction-sections -fdata-sections -ffixed-r8 -ffreestanding \
+	  -fstack-usage -fno-common -fno-builtin -fno-stack-protector \
+	  -fno-toplevel-reorder
+WFLAGS	= -Wall -Wstrict-prototypes -Wno-format-nonliteral -Wno-format-security
+CFLAGS	= -g -Os -fsigned-char $(INCS) $(DEFS) $(MFLAGS) $(FFLAGS) $(WFLAGS)
+LDFLAGS	= -g -Ttext 0x0c100000
 TARGET	= cpmega88
-OBJS	= main.o uart_base.o uart_avr.o uart_asm.o sram_avr.o sram_asm.o \
-	  sdcard_base.o sdcard_avr.o fat.o eeprom_base.o eeprom_avr.o i8080.o
+OBJS	= main.o uart_base.o uart_uboot.o sram_base.o sdcard_base.o \
+	  sdcard_uboot.o fat.o eeprom_base.o eeprom_image.o eeprom_uboot.o \
+	  cpu_8080.o
+UBOOT	= ../third_party/u-boot-ac100-exp
 
-all: $(TARGET).hex
+all: $(TARGET).srec $(TARGET).bin
 
-size: $(TARGET).elf
-	$(SIZE) $(SFLAGS) $(TARGET).elf
+$(TARGET).srec: $(TARGET).elf
+	$(OBJCOPY) -O srec $< $@
 
-spx: all
-	$(HIDSPX) $(HFLAGS) $(TARGET).hex
+$(TARGET).bin: $(TARGET).elf
+	$(OBJCOPY) -O binary $< $@
 
-%.hex: %.elf
-#	$(OBJCOPY) -j .text -j .data -O ihex $< $@
-	$(OBJCOPY) -O ihex $< $@
+$(TARGET).elf: $(OBJS) libstubs.o
+	$(LD) $(LDFLAGS) -o $@ -e main $(OBJS) libstubs.o $(LIBGCC)
 
-%.bin: %.elf
-	$(OBJCOPY) -j .text -j .data -O binary $< $@
+libstubs.o: $(UBOOT)/examples/standalone/stubs.o
+	$(LD) -r -o $@ $<
 
-%.o: %.c
+%.o: ../%.c
 	$(CC) -c $(CFLAGS) -o $@ $<
-
-%.o: %.s
-	$(CC) -c -o $@ $<
-
-%.o: %.S
-	$(CC) -c -o $@ $<
-
-$(TARGET).elf: $(OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
-
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
-
-clean:
-	rm -rf *.o *.hex *.elf
-

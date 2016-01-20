@@ -29,33 +29,43 @@
 # DAMAGE.
 #
 
-CC	= gcc
-SIZE	= avr-size
+CC	= avr-gcc
+OBJCOPY	= avr-objcopy
 HIDSPX	= hidspx
 MCU	= atmega88
-CFLAGS	= -O0 -Wall -DTEST
-LIBS	=
-LDFLAGS	=
-SFLAGS	=
+AFLAGS	= -Xassembler -I..
+CFLAGS	= -Os -Wall -mmcu=$(MCU) -mtiny-stack
+SFLAGS	= --mcu=$(MPU)
 HFLAGS	= -d2
 TARGET	= cpmega88
-OBJS	= main.o uart_base.o uart_posix.o sram_base.o sdcard_base.o \
-	  sdcard_posix.o fat.o eeprom_base.o eeprom_image.o eeprom_posix.o \
-	  cpu_8080.o
+OBJS	= main.o uart_base.o uart_avr.o uart_asm.o sram_avr.o sram_asm.o \
+	  sdcard_base.o sdcard_avr.o fat.o eeprom_base.o eeprom_avr.o i8080.o
 
-all: $(TARGET)
+all: $(TARGET).hex
 
-%.o: %.c
+size: $(TARGET).elf
+	$(SIZE) $(SFLAGS) $(TARGET).elf
+
+spx: all
+	$(HIDSPX) $(HFLAGS) $(TARGET).hex
+
+%.hex: %.elf
+	$(OBJCOPY) -O ihex $< $@
+
+%.bin: %.elf
+	$(OBJCOPY) -j .text -j .data -O binary $< $@
+
+%.o: ../%.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 
-%.o: %.s
-	$(CC) -c -o $@ $<
+%.o: ../%.s
+	$(CC) -c $(AFLAGS) -o $@ $<
 
-%.o: %.S
-	$(CC) -c -o $@ $<
+%.o: ../%.S
+	$(CC) -c $(AFLAGS) -o $@ $<
+
+$(TARGET).elf: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
 
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
-
-clean:
-	rm -rf *.o *.hex *.elf $(TARGET)
+	$(CC) $(CFLAGS) -o $@ $^

@@ -13,12 +13,13 @@ You can try running CP/M on POSIX environment, or EFI firmware.
 ```
 % git clone https://github.com/toyoshim/cp-mega88.git
 % cd cp-mega88
-% make -f Makefile.posix
+% make posix
 ```
 
 ### Boot CP/M on POSIX
 For booting, you need a CP/M disk image named 'sdcard.img' in current directory. i8080 I/O configuration of CP/Mega88 is compatible with z80pack. So you can use the image for z80pack (see following external resources section).
 ```
+% cd obj.posix
 % tar zxvf z80pack-1.17.tgz
 % ln -s z80pack-1.17/cpmsim/disks/library/cpm2-1.dsk sdcard.img
 % ./cpmega88
@@ -57,7 +58,7 @@ If you want, you can build it as an UEFI application so to run it without any op
 build it on Ubuntu 14.04.
 ```
 % sudo apt-get install gnu-efi
-% make -f Makefile.uefi
+% make uefi
 ```
 You can place a CP/M disk image at EFI/cpmega88/sdcard.img, and run
 cpmega88.efi from UEFI Shell, or boot it directly by e.g., placing it to
@@ -74,8 +75,9 @@ Here is an example step to create a bootable media.
 % mkdir efi
 % sudo mkfs.vfat /dev/sdb1
 % sudo mount /dev/sdb1 efi
-% make -f Makefile.uefi install
-% sudo cp -r EFI efi
+% cd obj.uefi
+% make -f ../makefiles/Makefile.uefi install
+% sudo cp -r fat/EFI efi
 % sudo cp $(somewhere)/sdcard.img efi/EFI/cpmega88/
 % sudo umount efi
 % rmdir efi
@@ -83,7 +85,7 @@ Here is an example step to create a bootable media.
 
 If you want to try it on QEMU, here is a step.
 ```
-% make -f Makefile.uefi install && make -f Makefile.uefi run
+% make make run_uefi
 ```
 You need QEMU of course, and will need OVMF.fd that adds UEFI support for QEMU.
 
@@ -98,14 +100,9 @@ Here is a step to build the bootable image.
 
 ```
 % sudo apt-get install gcc-arm-none-eabi  # for debian and variants
-% git clone https://github.com/ac100-ru/u-boot-ac100-exp.git
-% cd u-boot-ac100-exp
-% make paz00_config CROSS_COMPILE=arm-none-eabi-
-% make all CROSS_COMPILE=arm-none-eabi-
-% cd ..
 % git clone https://github.com/toyoshim/cp-mega88.git
 % cd cp-mega88
-% make -f Makefile.uboot
+% make uboot
 ```
 
 And here is a sequence to boot it from the U-Boot.

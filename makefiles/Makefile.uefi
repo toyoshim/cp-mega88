@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016, Takashi TOYOSHIMA <toyoshim@gmail.com>
+# Copyright (c) 2015, Takashi TOYOSHIMA <toyoshim@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,49 +29,48 @@
 # DAMAGE.
 #
 
-# Make an u-boot application that can boot on Toshiba AZ/05M.
-CC	= arm-none-eabi-gcc
-OBJCOPY	= arm-none-eabi-objcopy
-LD	= arm-none-eabi-ld.bfd
-LIBPATH	= `$(CC) -print-search-dirs | grep '^install' | cut -d ' ' -f 2`
-LIBGCC	= `$(CC) -print-libgcc-file-name`
-INCS	= -I$(UBOOT)/include -nostdinc -isystem $(LIBPATH)/include
-DEFS	= -DUBOOT -D__KERNEL__ -D__ARM__ \
-	  -DCONFIG_SYS_TEXT_BASE=0x0010E000 \
-	  -DCONFIG_SPL_TEXT_BASE=0x00108000 \
-	  -DCONFIG_SPL_PAD_TO=0 \
-	  -DCONFIG_ARM \
-	  -DTEST -DSDCARD_IMAGE_BASE=0x0c200000
-MFLAGS	= -msoft-float -marm -mno-thumb-interwork -mabi=aapcs-linux \
-	  -march=armv7-a
-FFLAGS	= -ffunction-sections -fdata-sections -ffixed-r8 -ffreestanding \
-	  -fstack-usage -fno-common -fno-builtin -fno-stack-protector \
-	  -fno-toplevel-reorder
-WFLAGS	= -Wall -Wstrict-prototypes -Wno-format-nonliteral -Wno-format-security
-CFLAGS	= -g -Os -fsigned-char $(INCS) $(DEFS) $(MFLAGS) $(FFLAGS) $(WFLAGS)
-LDFLAGS	= -g -Ttext 0x0c100000
+CC	= gcc
+OBJCOPY	= objcopy
+LD	= ld
+INCS	= -I/usr/include/efi -I/usr/include/efi/x86_64
+DEFS	= -DTEST -DEFI -DGNU_EFI_USE_MS_ABI -D__KERNEL__
+FLAGS	= --std=c11 -fpic -fshort-wchar -fno-stack-protector -fno-stack-check
+CFLAGS	= -O2 -Wall -maccumulate-outgoing-args $(INCS) $(DEFS) $(FLAGS)
+CRT0	= /usr/lib/crt0-efi-x86_64.o
+LIBGCC	= `gcc -print-libgcc-file-name`
+LIBS	= -nostdlib $(CRT0) -L/usr/lib -lefi -lgnuefi $(LIBGCC)
+LDS	= /usr/lib/elf_x86_64_efi.lds
+LDFLAGS	= --warn-common --no-undefined --fatal-warnings -shared -T $(LDS) \
+	-Bsymbolic
 TARGET	= cpmega88
-OBJS	= main.o uart_base.o uart_uboot.o sram_base.o sdcard_base.o \
-	  sdcard_uboot.o fat.o eeprom_base.o eeprom_image.o eeprom_uboot.o \
+EFIROOT	= fat
+EFIBIOS = ../third_party/OVMF.fd
+OBJS	= main.o uart_base.o uart_uefi.o sram_base.o sdcard_base.o \
+	  sdcard_uefi.o fat.o eeprom_base.o eeprom_image.o eeprom_uefi.o \
 	  cpu_8080.o
-UBOOT	= ../u-boot-ac100-exp
 
-all: $(TARGET).srec $(TARGET).bin
+all: $(TARGET).efi
 
-$(TARGET).srec: $(TARGET).elf
-	$(OBJCOPY) -O srec $< $@
+$(TARGET).efi: $(TARGET).so
+	$(OBJCOPY) -j .text -j .sdata -j .data -j .dynamic -j .dynsym \
+		-j .rel -j .rela -j .rel.\* -j .rela.\* \
+		-j .rel\* -j .rela\* -j .reloc \
+		--target efi-app-x86_64 $< $@
 
-$(TARGET).bin: $(TARGET).elf
-	$(OBJCOPY) -O binary $< $@
-
-$(TARGET).elf: $(OBJS) libstubs.o
-	$(LD) $(LDFLAGS) -o $@ -e main $(OBJS) libstubs.o $(LIBGCC)
-
-libstubs.o: $(UBOOT)/examples/standalone/stubs.o
-	$(LD) -r -o $@ $<
-
-%.o: %.c
+%.o: ../%.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 
-clean:
-	rm -rf *.o *.su *.elf $(TARGET).bin $(TARGET).srec
+$(TARGET).so: $(OBJS)
+	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+install:
+	@if [ ! -d $(EFIROOT)/EFI/Boot ]; then mkdir -p $(EFIROOT)/EFI/Boot; fi
+	@if [ ! -d $(EFIROOT)/EFI/cpmega88 ]; then \
+		mkdir -p $(EFIROOT)/EFI/cpmega88; fi
+	cp $(TARGET).efi $(EFIROOT)/EFI/Boot/bootx64.efi
+	cp $(TARGET).efi $(EFIROOT)/EFI/cpmega88/bootx64.efi
+	cp ../third_party/z80pack-1.27/cpmsim/disks/library/cpm2-1.dsk \
+		$(EFIROOT)/EFI/cpmega88/sdcard.img
+
+run: install
+	qemu-system-x86_64 -bios $(EFIBIOS) -hda fat:rw:$(EFIROOT) -net none

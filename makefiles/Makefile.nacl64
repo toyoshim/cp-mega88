@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015, Takashi TOYOSHIMA <toyoshim@gmail.com>
+# Copyright (c) 2011, Takashi TOYOSHIMA <toyoshim@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,48 +29,26 @@
 # DAMAGE.
 #
 
-CC	= gcc
-OBJCOPY	= objcopy
-LD	= ld
-INCS	= -I/usr/include/efi -I/usr/include/efi/x86_64
-DEFS	= -DTEST -DEFI -DGNU_EFI_USE_MS_ABI -D__KERNEL__
-FLAGS	= --std=c11 -fpic -fshort-wchar -fno-stack-protector -fno-stack-check
-CFLAGS	= -O2 -Wall -maccumulate-outgoing-args $(INCS) $(DEFS) $(FLAGS)
-CRT0	= /usr/lib/crt0-efi-x86_64.o
-LIBGCC	= `gcc -print-libgcc-file-name`
-LIBS	= -nostdlib $(CRT0) -L/usr/lib -lefi -lgnuefi $(LIBGCC)
-LDS	= /usr/lib/elf_x86_64_efi.lds
-LDFLAGS	= --warn-common --no-undefined --fatal-warnings -shared -T $(LDS) \
-	-Bsymbolic
-TARGET	= cpmega88
-EFIROOT	= EFI
-EFIBIOS = OVMF.fd
-OBJS	= main.o uart_base.o uart_uefi.o sram_base.o sdcard_base.o \
-	  sdcard_uefi.o fat.o eeprom_base.o eeprom_image.o eeprom_uefi.o \
-	  cpu_8080.o
+CC	= x86_64-nacl-gcc
+CXX	= x86_64-nacl-g++
+FSFLAGS	= `../third_party/naclfs/bin/naclfs-config --cflags newlib-x86_64`
+CFLAGS	= -O0 -g -Wall -m64 -pthread -DTEST $(FSFLAGS)
+CXXFLAGS= -O0 -g -Wall -m64 -pthread $(FSFLAGS)
+LDFLAGS	= `../third_party/naclfs/bin/naclfs-config --libs newlib-x86_64`
+TARGET	= ../native_client/cpmega88_x86_64.nexe
 
-all: $(TARGET).efi
+all: $(TARGET)
 
-$(TARGET).efi: $(TARGET).so
-	$(OBJCOPY) -j .text -j .sdata -j .data -j .dynamic -j .dynsym \
-		-j .rel -j .rela -j .rel.\* -j .rela.\* \
-		-j .rel\* -j .rela\* -j .reloc \
-		--target efi-app-x86_64 $< $@
+OBJS	= main.o uart_base.o uart_posix.o sram_base.o sdcard_base.o \
+	  sdcard_posix.o fat.o eeprom_base.o eeprom_image.o eeprom_posix.o \
+	  cpu_8080.o nacl_main.o
 
-%.o: %.c
+%.o: ../%.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 
-$(TARGET).so: $(OBJS)
-	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+%.o: ../native_client/%.cc
+	$(CC) -c $(CFLAGS) -o $@ $<
 
-clean:
-	rm -rf *.o $(TARGET).so $(TARGET).efi $(EFIROOT)/EFI
+$(TARGET): $(OBJS)
+	$(CXX) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-install:
-	mkdir -p $(EFIROOT)/EFI/Boot
-	cp $(TARGET).efi $(EFIROOT)/EFI/Boot/bootx64.efi
-	mkdir -p $(EFIROOT)/EFI/cpmega88
-	cp $(TARGET).efi $(EFIROOT)/EFI/cpmega88/
-
-run:
-	qemu-system-x86_64 -bios $(EFIBIOS) -hda fat:rw:$(EFIROOT) -net none

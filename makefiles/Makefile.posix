@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, Takashi TOYOSHIMA <toyoshim@gmail.com>
+# Copyright (c) 2010, Takashi TOYOSHIMA <toyoshim@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,39 +29,17 @@
 # DAMAGE.
 #
 
-CC	= x86_64-nacl-gcc
-CXX	= x86_64-nacl-g++
-FSFLAGS	= `./naclfs/bin/naclfs-config --cflags newlib-x86_64`
-CFLAGS	= -O0 -g -Wall -m64 -pthread -DTEST $(FSFLAGS)
-CXXFLAGS= -O0 -g -Wall -m64 -pthread $(FSFLAGS)
-LDFLAGS	= `./naclfs/bin/naclfs-config --libs newlib-x86_64`
-TARGET	= native_client/cpmega88_x86_64.nexe
-
-all: checkout-libs $(TARGET)
-
+CC	= gcc
+CFLAGS	= -O0 -Wall -DTEST
+TARGET	= cpmega88
 OBJS	= main.o uart_base.o uart_posix.o sram_base.o sdcard_base.o \
 	  sdcard_posix.o fat.o eeprom_base.o eeprom_image.o eeprom_posix.o \
-	  cpu_8080.o native_client/nacl_main.o
+	  cpu_8080.o
 
-checkout-libs: naclfs
+all: $(TARGET)
 
-naclfs:
-	git clone https://github.com/toyoshim/naclfs.git && cd naclfs && make newlib
-
-%.o: %.c
+%.o: ../%.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 
-%.o: %.s
-	$(CC) -c -o $@ $<
-
-%.o: %.S
-	$(CC) -c -o $@ $<
-
 $(TARGET): $(OBJS)
-	$(CXX) $(CFLAGS) -o $@ $^ $(LDFLAGS)
-
-clean:
-	rm -rf *.o *.hex *.elf native_client/*.o $(TARGET)
-
-dist-clean: clean
-	rm -rf naclfs
+	$(CC) $(CFLAGS) -o $@ $^
