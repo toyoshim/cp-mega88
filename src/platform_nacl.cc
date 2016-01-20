@@ -29,7 +29,7 @@
 // DAMAGE.
 //
 
-#include "nacl_main.h"
+#include "platform_nacl.h"
 
 #include <pthread.h>
 

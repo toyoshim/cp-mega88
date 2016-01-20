@@ -38,8 +38,8 @@ CFLAGS	= -Os -Wall -mmcu=$(MCU) -mtiny-stack
 SFLAGS	= --mcu=$(MPU)
 HFLAGS	= -d2
 TARGET	= cpmega88
-OBJS	= main_posix.o machine.o uart_base.o uart_avr.o uart_asm.o sram_avr.o \
-	  sram_asm.o sdcard_base.o sdcard_avr.o fat.o eeprom_base.o \
+OBJS	= platform_posix.o machine.o uart_base.o uart_avr.o uart_asm.o \
+	  sram_avr.o sram_asm.o sdcard_base.o sdcard_avr.o fat.o eeprom_base.o \
 	  eeprom_avr.o i8080.o
 
 all: $(TARGET).hex

@@ -29,8 +29,8 @@
  * DAMAGE.
  */
 
-#if !defined __nacl_main_h__
-# define __nacl_main_h__
+#if !defined __platform_nacl_h__
+# define __platform_nacl_h__
 
 # if defined(__cplusplus)
 extern "C" {
@@ -42,4 +42,4 @@ void nacl_sleep(void);
 };
 # endif // defined(__cplusplus)
 
-#endif // !defined(__nacl_main_h__)
+#endif // !defined(__platform_nacl_h__)

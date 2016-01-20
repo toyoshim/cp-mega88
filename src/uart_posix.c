@@ -32,7 +32,7 @@
 #include "uart.h"
 
 #if defined(__native_client__)
-# include "native_client/nacl_main.h"
+# include "platform_nacl.h"
 # define HAVE_NACL_MAIN_H
 #else
 # define HAVE_TERMIOS_H
