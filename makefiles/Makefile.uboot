@@ -41,7 +41,7 @@ DEFS	= -DUBOOT -D__KERNEL__ -D__ARM__ \
 	  -DCONFIG_SPL_TEXT_BASE=0x00108000 \
 	  -DCONFIG_SPL_PAD_TO=0 \
 	  -DCONFIG_ARM \
-	  -DTEST -DSDCARD_IMAGE_BASE=0x0c200000
+	  -DTEST -DTEXT_BASE=0x0c200000 -DSDCARD_IMAGE_BASE=0x0c200000
 MFLAGS	= -msoft-float -marm -mno-thumb-interwork -mabi=aapcs-linux \
 	  -march=armv7-a
 FFLAGS	= -ffunction-sections -fdata-sections -ffixed-r8 -ffreestanding \
@@ -51,7 +51,7 @@ WFLAGS	= -Wall -Wstrict-prototypes -Wno-format-nonliteral -Wno-format-security
 CFLAGS	= -g -Os -fsigned-char $(INCS) $(DEFS) $(MFLAGS) $(FFLAGS) $(WFLAGS)
 LDFLAGS	= -g -Ttext 0x0c100000
 TARGET	= cpmega88
-OBJS	= platform_posix.o machine.o uart_base.o uart_uboot.o sram_base.o \
+OBJS	= platform_uboot.o machine.o uart_base.o uart_uboot.o sram_base.o \
 	  sdcard_base.o sdcard_uboot.o fat.o eeprom_base.o eeprom_image.o \
 	  eeprom_uboot.o cpu_8080.o
 UBOOT	= ../third_party/u-boot-ac100-exp

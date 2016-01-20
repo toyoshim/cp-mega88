@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Takashi TOYOSHIMA <toyoshim@gmail.com>
+ * Copyright (c) 2016, Takashi TOYOSHIMA <toyoshim@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,19 +29,9 @@
  * DAMAGE.
  */
 
-#if !defined(__platform_nacl_h__)
-# define __platform_nacl_h__
+#if !defined(__platform_h__)
+# define __platform_h__
 
-# if defined(__cplusplus)
-extern "C" {
-# endif // defined(__cplusplus)
+void platform_reset(void);
 
-# include "platform.h"
-
-void nacl_sleep(void);
-
-# if defined(__cplusplus)
-};
-# endif // defined(__cplusplus)
-
-#endif // !defined(__platform_nacl_h__)
+#endif // !defined(__platform_h__)

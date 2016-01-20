@@ -32,11 +32,12 @@
 #include "platform_nacl.h"
 
 #include <pthread.h>
+#include <setjmp.h>
+#include <sys/fcntl.h>
 
 #include <cstdio>
 #include <sstream>
 #include <string>
-#include <sys/fcntl.h>
 
 #include "ppapi/cpp/completion_callback.h"
 #include "ppapi/cpp/input_event.h"
@@ -47,6 +48,8 @@
 #include "naclfs.h"
 
 #include "machine.h"
+
+static jmp_buf jb;
 
 class CpMega88Instance : public pp::Instance {
 public:
@@ -106,6 +109,7 @@ public:
 
   static void* ThreadMain(void* param) {
     puts("OK");
+    setjmp(jb);
     machine_boot();
     return NULL;
   }
@@ -161,3 +165,9 @@ nacl_sleep
   self->Block();
 }
 
+extern "C" void
+platform_reset
+(void)
+{
+  longjmp(jb, 0);
+}

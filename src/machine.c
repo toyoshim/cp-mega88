@@ -29,11 +29,7 @@
  * DAMAGE.
  */
 
-#if defined(TEST)
-# if !defined(UBOOT)
-#  include <setjmp.h>
-# endif // !defined(UBOOT)
-#else // defined(TEST)
+#if !defined(TEST)
 # include <avr/io.h>
 #endif // !defined(TEST)
 #if defined(EFI)
@@ -46,6 +42,7 @@
 #include "fat.h"
 #include "eeprom.h"
 #include "config.h"
+#include "platform.h"
 
 #if defined(CPU_EMU_C)
 # include "cpu_8080.h"
@@ -70,32 +67,10 @@ extern EFI_HANDLE *efi_image;
 extern EFI_SYSTEM_TABLE *efi_systab;
 #endif // defined(EFI)
 
-#if defined(TEST)
-# if !defined(UBOOT)
-jmp_buf jb;
-# endif // !defined(UBOOT)
-#else // defined(TEST)
+#if !defined(TEST)
 extern uint8_t _end;
 extern uint8_t __stack;
 #endif // defined(TEST)
-
-void
-reset
-(void)
-{
-#if defined(EFI)
-  uefi_call_wrapper(efi_systab->BootServices->Exit, 3,
-                    efi_image, EFI_SUCCESS, 0, NULL);
-#elif defined(UBOOT)
-  for (;;);
-#elif defined(TEST)
-  longjmp(jb, 0);
-#else // defined(TEST)
-  asm ("mov r30, r1");
-  asm ("mov r31, r1");
-  asm ("ijmp");
-#endif // defined(TEST)
-}
 
 void
 disk_read
@@ -206,7 +181,7 @@ boot
 #if !defined(MONITOR)
   uart_putsln("press any key to reboot");
   while (-1 == uart_getchar());
-  reset();
+  platform_reset();
 #endif // !defined(MONITOR)
 }
 
@@ -342,7 +317,7 @@ prompt
   if (0 == *cmd) {
     return;
   } else if (0 == strdcmp("r", cmd, 0)) {
-    reset();
+    platform_reset();
   } else if (0 == strdcmp("b", cmd, 0)) {
     boot();
     return;
@@ -841,9 +816,6 @@ int
 machine_boot
 (void)
 {
-#if defined(TEST) && !defined(UBOOT) && !defined(EFI)
-  setjmp(jb);
-#endif // defined(TEST) && !defined(UBOOT) && !defined(EFI)
   uart_init();
   sram_init();
   sdcard_init();

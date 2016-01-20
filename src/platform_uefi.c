@@ -29,6 +29,8 @@
  * DAMAGE.
  */
 
+#include "platform.h"
+
 #include <efi/efi.h>
 #include <efi/efilib.h>
 
@@ -86,4 +88,12 @@ efi_main
   }
   machine_boot();
   return 0;
+}
+
+void
+platform_reset
+(void)
+{
+  uefi_call_wrapper(efi_systab->BootServices->Exit, 3,
+                    efi_image, EFI_SUCCESS, 0, NULL);
 }

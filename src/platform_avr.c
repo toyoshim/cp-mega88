@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Takashi TOYOSHIMA <toyoshim@gmail.com>
+ * Copyright (c) 2016, Takashi TOYOSHIMA <toyoshim@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,19 +29,21 @@
  * DAMAGE.
  */
 
-#if !defined(__platform_nacl_h__)
-# define __platform_nacl_h__
+#include "machine.h"
 
-# if defined(__cplusplus)
-extern "C" {
-# endif // defined(__cplusplus)
+int
+main
+(int argc, char **argv)
+{
+  machine_boot();
+  return 0;
+}
 
-# include "platform.h"
-
-void nacl_sleep(void);
-
-# if defined(__cplusplus)
-};
-# endif // defined(__cplusplus)
-
-#endif // !defined(__platform_nacl_h__)
+void
+platform_reset
+(void)
+{
+  asm ("mov r30, r1");
+  asm ("mov r31, r1");
+  asm ("ijmp");
+}

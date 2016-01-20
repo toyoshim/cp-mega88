@@ -31,10 +31,22 @@
 
 #include "machine.h"
 
+#include <setjmp.h>
+
+static jmp_buf jb;
+
 int
 main
 (int argc, char **argv)
 {
+  setjmp(jb);
   machine_boot();
   return 0;
+}
+
+void
+platform_reset
+(void)
+{
+  longjmp(jb, 0);
 }
