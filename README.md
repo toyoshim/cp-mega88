@@ -102,7 +102,7 @@ Here is a step to build the bootable image.
 % sudo apt-get install gcc-arm-none-eabi  # for debian and variants
 % git clone https://github.com/toyoshim/cp-mega88.git
 % cd cp-mega88
-% make uboot
+% make uboot_ac100
 ```
 
 And here is a sequence to boot it from the U-Boot.
@@ -116,6 +116,32 @@ And here is a sequence to boot it from the U-Boot.
 Note that you need to setup U-Boot correctly so that the AZ/05M boots from the
 U-Boot to choose the system, and this instruction does not cover it.
 You could use bootmenu command to automate the boot sequence.
+
+### As an U-Boot application that runs on Raspberry Pi
+You can build the one for Raspberry Pi, instead. Please make it with the target
+`uboot_rpi`.
+
+You should prepare Rasberry Pi ready SD-card, and copy sdcard.img,
+obj.uboot_rpi/cpmeta88.bin and third_party/u-boot/u-boot.bin to the boot
+partition that is formatted in fat.
+
+Also you should overwrite config.txt as follows.
+
+```
+kernel=u-boot.bin
+```
+
+With this SD-card, Raspberry Pi should be able to boot with U-Boot.
+Once Das U-Boot shows a prompt, following commands will boot CP/M.
+
+```
+# fatload mmc 0:1 0x00100000 /cpmega88.bin
+# fatload mmc 0:1 0x00200000 /sdcard.img
+# go 0x00100000
+```
+
+Note that sdcard image works like a ram disk, and the system does not write
+back stored data to the original image file.
 
 ### Monitor Commands
 ```

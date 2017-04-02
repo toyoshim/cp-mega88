@@ -853,6 +853,7 @@ machine_boot
     uart_puts("FAT: ");
     uart_puthex(-rc);
     uart_putsln("");
+    sd_fat = 0;
 #endif // !defined(MSG_MIN);
   }
 #endif // defined(USE_FAT)

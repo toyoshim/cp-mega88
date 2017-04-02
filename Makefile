@@ -34,19 +34,21 @@
 usage:
 	@echo "Usage: make <target>"
 	@echo "  Target:"
-	@echo "    all       ... build all following targets"
-	@echo "    avr       ... build firmware for ATmega88"
-	@echo "    posix     ... build application for posix compatible host"
-	@echo "    nacl      ... build for both i686-nacl and x86_64-nacl"
-	@echo "    nacl32    ... build for i686-nacl"
-	@echo "    nacl64    ... build for x86_64-nacl"
-	@echo "    uboot     ... build U-Boot application for AZ/05M"
-	@echo "    uefi      ... build UEFI application for x86_64"
-	@echo "    run_uefi  ... run built UEFI application on QEMU"
-	@echo "    clean     ... delete all generated files"
-	@echo "    distclean ... delete all generated and downloaded files"
+	@echo "    all            ... build all following targets"
+	@echo "    avr            ... build firmware for ATmega88"
+	@echo "    posix          ... build application for posix compatible host"
+	@echo "    nacl           ... build for both i686-nacl and x86_64-nacl"
+	@echo "    nacl32         ... build for i686-nacl"
+	@echo "    nacl64         ... build for x86_64-nacl"
+	@echo "    uboot_ac100    ... build U-Boot application for AZ/05M"
+	@echo "    uboot_qemu_arm ... build U-Boot application for QEMU/arm"
+	@echo "    uboot_rpi      ... build U-Boot application for Raspberry Pi"
+	@echo "    uefi           ... build UEFI application for x86_64"
+	@echo "    run_uefi       ... run built UEFI application on QEMU"
+	@echo "    clean          ... delete all generated files"
+	@echo "    distclean      ... delete all generated and downloaded files"
 
-all: avr posix nacl32 nacl64 uboot uefi
+all: avr posix nacl32 nacl64 uboot_ac100 uboot_qemu_arm uboot_rpi uefi
 
 nacl: nacl32 nacl64
 
@@ -60,7 +62,9 @@ nacl32:: third_party/naclfs
 
 nacl64:: third_party/naclfs
 
-uboot:: third_party/u-boot-ac100-exp
+uboot_ac100:: third_party/u-boot-ac100-exp
+
+uboot_rpi:: third_party/u-boot
 
 third_party/naclfs: third_party
 	@if [ ! -d $@ ]; then \
@@ -76,6 +80,15 @@ third_party/u-boot-ac100-exp: third_party
 		git clone https://github.com/ac100-ru/u-boot-ac100-exp.git && \
 		cd u-boot-ac100-exp && \
 		make paz00_config CROSS_COMPILE=arm-none-eabi- && \
+		make all CROSS_COMPILE=arm-none-eabi-; \
+	fi
+
+third_party/u-boot: third_party
+	@if [ ! -d $@ ]; then \
+		cd third_party && \
+		git clone git://git.denx.de/u-boot.git && \
+		cd u-boot && \
+		make rpi_defconfig CROSS_COMPILE=arm-none-eabi- && \
 		make all CROSS_COMPILE=arm-none-eabi-; \
 	fi
 
