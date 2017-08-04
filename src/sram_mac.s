@@ -52,11 +52,19 @@
 	out DOUT, \adr_l/* output address low   */
 	ldi \work, C1
 	out CTRL, \work	/* assert CLK for Latch */
+	mov \work, r6
+	sbrc \adr_h,7
+	ldi \work. 1
+	bst \work, 0
+	bld \adr_h,7
+	bst \work, 1
 	out DOUT, \adr_h/* output address high  */
 	ldi \work, C2
+	bld \work, A16
 	out CTRL, \work	/* assert CLK for Latch */
 	out DDIR, r1	/* data port as input   */
 	ldi \work, RD
+	bld /work, A16
 	out CTRL, \work	/* assert /W and E2     */
 	out DOUT, r1	/* disable pull-ups     */
 	ldi \work, DATA_OUT
@@ -69,11 +77,23 @@
 	out DOUT, \adr_l/* output address low   */
 	ldi \work, C1
 	out CTRL, \work	/* assert CLK for Latch */
+	mov \work, r6
+	sbrc \adr_h, 7
+	ldi \work, 1
+	bst \work, 0
+	bld \adr_h,7
+	bst \work, 1
 	out DOUT, \adr_h/* output address high  */
 	ldi \work, C2
+	bld \work, A16
 	out CTRL, \work	/* assert CLK for Latch */
 	out DOUT, \data	/* output data          */
 	ldi \work, WR
+	bld \work, A16
 	out CTRL, \work	/* assert E2            */
 	out CTRL, r1	/* negate signals       */
+.endm
+
+.macro _sram_bank bank=r24
+	mov r6, r24
 .endm
