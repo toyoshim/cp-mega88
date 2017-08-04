@@ -57,6 +57,9 @@ crc = 0xffff;
 static unsigned long
 cur_blk = 0;
 
+static unsigned char
+ccs = 0;
+
 static void
 sd_out
 (char c)
@@ -89,7 +92,7 @@ sd_in
 (char n)
 {
   int i;
-  int rc = 0;
+  unsigned long rc = 0;
   for (i = 0; i < n; i++) {
     char c;
     PORT &= ~P_CK;
@@ -98,7 +101,8 @@ sd_in
     rc <<= 1;
     if (0 != (c & P_DO)) rc |= 1;
   }
-  return rc;
+ if (n==39) return (rc >> 24);		// we want bit 30 in response R3 (CCS)
+ else return rc;
 }
 
 static char
@@ -106,6 +110,7 @@ sd_cmd
 (char cmd, char arg0, char arg1, char arg2, char arg3, char crc)
 {
   PORT = (PORT | P_DI | P_CK) & ~P_CS;
+  sd_out(0xff);
   sd_out(cmd);
   sd_out(arg0);
   sd_out(arg1);
@@ -114,7 +119,8 @@ sd_cmd
   sd_out(crc);
   PORT |= P_DI;
   if (sd_busy(0) < 0) return -1;
-  return sd_in(7);
+  else if ((0x48 == cmd) || (0x7a == cmd)) return sd_in(39);
+  else return sd_in(7);
 }
 
 void
@@ -150,16 +156,25 @@ sdcard_open
   // cmd0
   rc = sd_cmd(0x40, 0x00, 0x00, 0x00, 0x00, 0x95);
   if (1 != rc) return -1;
-  // cmd1
-  unsigned short timeout = 0xffff;
-  for (; timeout != 0; timeout--) {
-    rc = sd_cmd(0x41, 0x00, 0x00, 0x00, 0x00, 0x00);
-    if (0 == rc) break;
-    if (-1 == rc) return -2;
-  }
-  if (0 != rc) return -3;
 
+  // cmd8			SEND_IF_COND (response R7 is ignored)
+  rc = sd_cmd(0x48, 0x00, 0x00, 0x01, 0x0aa, 0x87);
+
+  do {
+  // cmd55		APP_CMD (response R1)
+   rc = sd_cmd(0x77, 0x00, 0x00, 0x00, 0x00, 0x01);
+  
+  // acmd41		SD_SEND_OP_COND (response R1)
+  rc = sd_cmd(0x69, 0x40, 0x00, 0x00, 0x00, 0x77);
+  } while (0 != rc);			// no errors, no idle
+  
+  do 
+  // cmd58		READ_OCR (response R3)
+  rc = sd_cmd(0x7a, 0x00, 0x00, 0x00, 0x00, 0xfd);
+  while ( 0 == (rc & 0x80));		// card powerup not completed
+ 
   PORT &= ~P_CK;
+  ccs = rc & 64;			// ccs bit high means SDHC card
   return 0;
 }
 
@@ -167,6 +182,7 @@ int
 sdcard_fetch
 (unsigned long blk_addr)
 {
+  if (0 != ccs) blk_addr >>= 9; // SDHC cards use block addresses
   // cmd17
   char rc = sd_cmd(0x51, blk_addr >> 24, blk_addr >> 16, blk_addr >> 8, blk_addr, 0x00);
   if (0 != rc) return -1;
@@ -187,7 +203,8 @@ sdcard_fetch
 int
 sdcard_store
 (unsigned long blk_addr)
-{
+{ 
+  if (0 == ccs) blk_addr >>= 9; // SDHC card
   // cmd24
   char rc = sd_cmd(0x58, blk_addr >> 24, blk_addr >> 16, blk_addr >> 8, blk_addr, 0x00);
   if (0 != rc) return -1;
