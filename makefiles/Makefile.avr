@@ -33,7 +33,7 @@ CC	= avr-gcc
 OBJCOPY	= avr-objcopy
 HIDSPX	= hidspx
 MCU	= atmega88
-AFLAGS	= -Xassembler -I../src
+AFLAGS	= -Xassembler -I../src -mmcu=$(MCU)
 CFLAGS	= -Os -Wall -mmcu=$(MCU) -mtiny-stack
 SFLAGS	= --mcu=$(MPU)
 HFLAGS	= -d2
