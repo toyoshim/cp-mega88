@@ -101,6 +101,9 @@ boot
     for (j = 0; j < 512; j++) sram_write(addr + j, sdcard_read(j));
   }
   for (i = 0; i < 0x100; i++) sram_write(i, 0);
+  sram_write(0x0000, 0xc3);
+  sram_write(0x0001, 0x00);
+  sram_write(0x0002, 0xFA);	// jump bios (cold boot)
   sram_write(0x0005, 0xc3);
   sram_write(0x0006, 0x06);
   sram_write(0x0007, 0x3c + 0xb0);

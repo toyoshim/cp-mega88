@@ -37,17 +37,20 @@
 #define OFF_FS_TYPE 54
 #define OFF_B_P_SCT 11
 #define OFF_SCT_P_C 13
+#define OFF_SCT_RSV 14
 #define OFF_NUM_O_F 16
 #define OFF_ROOTNUM 17
 #define OFF_SCT_P_F 22
 
 static unsigned char sectors_per_cluster;
 static unsigned long fat_first_sect;
+static unsigned short reserved_sectors;
 
 static unsigned long dir_sector;
 static unsigned short dir_entries;
 static unsigned short dir_offset;
 static unsigned short dir_cluster;
+static unsigned short dir_size;
 
 static unsigned short file_cluster;
 static unsigned long file_offset;
@@ -90,13 +93,13 @@ fetch_cluster
   if (0 == cluster) sector = dir_sector + (offset >> 9);
   else {
     while (offset > (sectors_per_cluster << 9)) {
-      unsigned long pos = ((fat_first_sect + 1) << 9) + (cluster << 1);
+      unsigned long pos = ((fat_first_sect + reserved_sectors) << 9) + (cluster << 1);
       if (sdcard_fetch(pos & 0xfffffe00) < 0) return -1;
       cluster = read2(pos & 0x000001ff);
       if ((cluster < 2) || (0xfff7 <= cluster)) return -2;
       offset -= (sectors_per_cluster << 9);
     }
-    unsigned long cluster_sect = dir_sector + 32 + (unsigned long)(cluster - 2) * sectors_per_cluster;
+    unsigned long cluster_sect = dir_sector  +  (unsigned long)(dir_size + cluster - 2) * sectors_per_cluster;
     sector = cluster_sect + (offset >> 9);
   }
   return sdcard_fetch(sector << 9);
@@ -119,10 +122,12 @@ fat_init
 
   unsigned short bytes_per_sector = read2(OFF_B_P_SCT);
   unsigned char number_of_fats = sdcard_read(OFF_NUM_O_F);
-  unsigned char sectors_per_fat = sdcard_read(OFF_SCT_P_F);
+  unsigned short sectors_per_fat = read2(OFF_SCT_P_F);
+  reserved_sectors = read2(OFF_SCT_RSV);
   sectors_per_cluster = sdcard_read(OFF_SCT_P_C);
   dir_entries = read2(OFF_ROOTNUM);
-  dir_sector = fat_first_sect + 1 + sectors_per_fat * number_of_fats;
+  dir_sector = fat_first_sect + reserved_sectors + sectors_per_fat * number_of_fats;
+  dir_size =  ((unsigned short)(dir_entries  >> 4 ) + sectors_per_cluster -1) / sectors_per_cluster;
 
   if (512 != bytes_per_sector) return -5;
 
