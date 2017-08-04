@@ -94,6 +94,7 @@ boot
 #else // if defined(CPU_EMU_A)
   i8080_reset();
 #endif // defined(CPU_EMU_C)
+  sram_bank(0);
   int i, j;
   for (i = 0; i < 13; i++) {
     disk_read(i << 9);
@@ -101,6 +102,9 @@ boot
     for (j = 0; j < 512; j++) sram_write(addr + j, sdcard_read(j));
   }
   for (i = 0; i < 0x100; i++) sram_write(i, 0);
+  sram_write(0x0000, 0xc3);
+  sram_write(0x0001, 0x00);
+  sram_write(0x0002, 0xFA);	// jump bios (cold boot)
   sram_write(0x0005, 0xc3);
   sram_write(0x0006, 0x06);
   sram_write(0x0007, 0x3c + 0xb0);
@@ -320,6 +324,12 @@ prompt
     platform_reset();
   } else if (0 == strdcmp("b", cmd, 0)) {
     boot();
+    return;
+  } else if (0 == strdcmp("p", cmd, ' ')) {
+    if (NULL == arg) goto usage;
+    unsigned short n;
+    n = getnum(arg) & 0x3;
+    sram_bank(n);
     return;
   } else if (0 == strdcmp("a", cmd, ' ')) {
     if (NULL == arg) goto usage;
@@ -547,6 +557,7 @@ prompt
   uart_putsln("monitor commands");
   uart_putsln(" r                : reset");
   uart_putsln(" b                : boot CP/M 2.2");
+  uart_putsln(" p <0-3>          : select 32k memory page");
   uart_putsln(" wp <on/off>      : file system write protection");
   uart_putsln(" a <on/off>       : auto boot");
 #  if defined(MON_MEM)
@@ -571,7 +582,7 @@ prompt
 #   endif // defined(EFI)
 #  endif // defined(MON_CON)
 # else // !defined(MSG_MIN)
-  uart_puts("  CMD R;B;WP t;A t");
+  uart_puts("  CMD R;B;P n;WP t;A t");
 #  if defined(MON_MEM)
   uart_puts(";MR a;MW a,d");
 #  endif // defined(MON_MEM)

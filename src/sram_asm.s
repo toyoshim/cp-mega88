@@ -57,3 +57,13 @@ sram_write:
 	_sram_write
 	ret
 	.size sram_write, .-sram_write
+
+.global sram_bank
+	.type	sram_bank, @function
+sram_bank:
+	/*
+	 * r24: bank number
+	 */
+	 _sram_bank
+	ret
+	.size sram_bank, .-sram_bank
