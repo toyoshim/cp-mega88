@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Takashi TOYOSHIMA <toyoshim@gmail.com>
+ * Copyright (c) 2018, Takashi TOYOSHIMA <toyoshim@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,52 +29,11 @@
  * DAMAGE.
  */
 
-#include "uart.h"
+#if !defined(__io_h__)
+# define __io_h__
 
-static void
-put_halfhex
-(unsigned char c)
-{
-  if (c < 10) uart_putchar('0' + c);
-  else uart_putchar('A' - 10 + c);
-}
+void io_init(void);
+void io_out(unsigned char addr, unsigned char data);
+unsigned char io_in(unsigned char addr);
 
-void
-uart_puthex
-(unsigned char c)
-{
-  put_halfhex(c >> 4);
-  put_halfhex(c & 15);
-}
-
-void
-uart_putnum_u16
-(unsigned short n, int digit)
-{
-  unsigned short d = 10000;
-  if (digit > 0) {
-    d = 1;
-    for (digit--; digit > 0; digit--) d *= 10;
-  }
-  do {
-    int num = n / d;
-    n = n % d;
-    d /= 10;
-    uart_putchar('0' + num);
-  } while (0 != d);
-}
-
-void
-uart_puts
-(char *s)
-{
-  while (0 != *s) uart_putchar(*s++);
-}
-
-void
-uart_putsln
-(char *s)
-{
-  uart_puts(s);
-  uart_puts("\r\n");
-}
+#endif // !defined(__io_h__)

@@ -36,13 +36,14 @@
 # include <efi/efi.h>
 # include <efi/efilib.h>
 #endif // defined(EFI)
-#include "uart.h"
-#include "sram.h"
-#include "sdcard.h"
-#include "fat.h"
-#include "eeprom.h"
+#include "con.h"
 #include "config.h"
+#include "eeprom.h"
+#include "fat.h"
+#include "io.h"
 #include "platform.h"
+#include "sdcard.h"
+#include "sram.h"
 
 #if defined(CPU_EMU_C)
 # include "cpu_8080.h"
@@ -108,25 +109,25 @@ boot
   do {
 # if defined(CPM_DEBUG)
     unsigned char op = sram_read(work.pc);
-    uart_puts("pc: ");
-    uart_puthex(work.pc >> 8);
-    uart_puthex(work.pc);
-    uart_puts(" / ");
-    uart_puthex(work.a);
-    uart_puthex(work.f);
-    uart_puthex(work.b);
-    uart_puthex(work.c);
-    uart_puthex(work.d);
-    uart_puthex(work.e);
-    uart_puthex(work.h);
-    uart_puthex(work.l);
-    uart_puthex(work.pc >> 8);
-    uart_puthex(work.pc);
-    uart_puthex(work.sp >> 8);
-    uart_puthex(work.sp);
-    uart_puts(" (");
-    uart_puthex(op);
-    uart_putsln(")");
+    con_puts("pc: ");
+    con_puthex(work.pc >> 8);
+    con_puthex(work.pc);
+    con_puts(" / ");
+    con_puthex(work.a);
+    con_puthex(work.f);
+    con_puthex(work.b);
+    con_puthex(work.c);
+    con_puthex(work.d);
+    con_puthex(work.e);
+    con_puthex(work.h);
+    con_puthex(work.l);
+    con_puthex(work.pc >> 8);
+    con_puthex(work.pc);
+    con_puthex(work.sp >> 8);
+    con_puthex(work.sp);
+    con_puts(" (");
+    con_puthex(op);
+    con_putsln(")");
     cpu_8080_step(&work);
   } while (1);
 # else // defined(CPM_DEBUG)
@@ -134,31 +135,31 @@ boot
 # endif // defined(CPM_DEBUG)
 #else // if defined(CPU_EMU_A)
 # if defined(CPM_DEBUG)
-  uart_putsln("            A F B C D E H LPhPlShSl");
+  con_putsln("            A F B C D E H LPhPlShSl");
   char r = 0;
 # endif // defined(CPM_DEBUG)
   do {
 # if defined(CPM_DEBUG)
     unsigned char op = sram_read((i8080_work.reg_pc_h << 8) | i8080_work.reg_pc_l);
-    uart_puts("pc: ");
-    uart_puthex(i8080_work.reg_pc_h);
-    uart_puthex(i8080_work.reg_pc_l);
-    uart_puts(" / ");
-    uart_puthex(i8080_work.reg_a);
-    uart_puthex(i8080_work.reg_f);
-    uart_puthex(i8080_work.reg_b);
-    uart_puthex(i8080_work.reg_c);
-    uart_puthex(i8080_work.reg_d);
-    uart_puthex(i8080_work.reg_e);
-    uart_puthex(i8080_work.reg_h);
-    uart_puthex(i8080_work.reg_l);
-    uart_puthex(i8080_work.reg_pc_h);
-    uart_puthex(i8080_work.reg_pc_l);
-    uart_puthex(i8080_work.reg_sp_h);
-    uart_puthex(i8080_work.reg_sp_l);
-    uart_puts(" (");
-    uart_puthex(op);
-    uart_putsln(")");
+    con_puts("pc: ");
+    con_puthex(i8080_work.reg_pc_h);
+    con_puthex(i8080_work.reg_pc_l);
+    con_puts(" / ");
+    con_puthex(i8080_work.reg_a);
+    con_puthex(i8080_work.reg_f);
+    con_puthex(i8080_work.reg_b);
+    con_puthex(i8080_work.reg_c);
+    con_puthex(i8080_work.reg_d);
+    con_puthex(i8080_work.reg_e);
+    con_puthex(i8080_work.reg_h);
+    con_puthex(i8080_work.reg_l);
+    con_puthex(i8080_work.reg_pc_h);
+    con_puthex(i8080_work.reg_pc_l);
+    con_puthex(i8080_work.reg_sp_h);
+    con_puthex(i8080_work.reg_sp_l);
+    con_puts(" (");
+    con_puthex(op);
+    con_putsln(")");
     //if (0 != r) break;
     r = i8080_run();
   } while (1);
@@ -167,20 +168,20 @@ boot
 # endif // defined(CPM_DEBUG)
 #endif // defined(CPU_EMU_C)
 #if !defined(MSG_MIN)
-  uart_putsln("quit vm");
+  con_putsln("quit vm");
 #if defined(CPU_EMU_C)
   unsigned char op = sram_read(work.pc);
-  uart_puts("pc: ");
-  uart_puthex(work.pc >> 8);
-  uart_puthex(work.pc);
-  uart_puts(" (");
-  uart_puthex(op);
-  uart_putsln(")");
+  con_puts("pc: ");
+  con_puthex(work.pc >> 8);
+  con_puthex(work.pc);
+  con_puts(" (");
+  con_puthex(op);
+  con_putsln(")");
 #endif // defined(CPU_EMU_C)
 #endif // !defined(MSG_MIN)
 #if !defined(MONITOR)
-  uart_putsln("press any key to reboot");
-  while (-1 == uart_getchar());
+  con_putsln("press any key to reboot");
+  while (-1 == con_getchar());
   platform_reset();
 #endif // !defined(MONITOR)
 }
@@ -245,8 +246,8 @@ void
 mount
 (char *name)
 {
-  uart_puts("A: ");
-  uart_puts(name);
+  con_puts("A: ");
+  con_puts(name);
   fat_rewind();
   for (;;) {
     if (fat_next() < 0) break;
@@ -256,14 +257,14 @@ mount
     fat_name(buf);
     if (0 != strdcmp(name, buf, 0)) continue;
     fat_open();
-    uart_putsln(" ok");
+    con_putsln(" ok");
     sd_fat = 1;
     eeprom_write(16, 0);
     eeprom_write_string(17, name);
     eeprom_write(16, 0x88);
     return;
   }
-  uart_putsln(" err");
+  con_putsln(" err");
   sd_fat = 0;
   return;
 }
@@ -283,31 +284,31 @@ prompt
 {
   char buffer[MAX_PROMPT + 1];
   unsigned char size = 0;
-  uart_puts("CP/Mega88>");
+  con_puts("CP/Mega88>");
   for (;;) {
     int c;
     do {
-      c = uart_getchar();
+      c = con_getchar();
     } while (c < 0);
     if ((0x08 == c) || (0x7f == c)) {
       if (0 != size) {
         size--;
-        uart_putchar(0x08);
-        uart_putchar(0x20);
-        uart_putchar(0x08);
+        con_putchar(0x08);
+        con_putchar(0x20);
+        con_putchar(0x08);
       }
     } else if (0x0a == c) {
     } else if (0x0d == c) {
-      uart_putsln("");
+      con_putsln("");
       break;
     } else if ((0 == size) && (0x10 == c)) {
       char *p;
       for (p = buffer; 0 != *p; p++) size++;
-      uart_puts(buffer);
+      con_puts(buffer);
     } else {
       if (MAX_PROMPT != size) {
         buffer[size++] = c;
-        uart_putchar(c);
+        con_putchar(c);
       }
     }
   }
@@ -324,29 +325,29 @@ prompt
   } else if (0 == strdcmp("a", cmd, ' ')) {
     if (NULL == arg) goto usage;
     if (0 == strdcmp("on", arg, 0)) {
-      uart_putsln(" on");
+      con_putsln(" on");
       eeprom_write(8, 0x88);
     } else {
-      uart_putsln(" off");
+      con_putsln(" off");
       eeprom_write(8, 0);
     }
     return;
   } else if (0 == strdcmp("wp", cmd, ' ')) {
     if (NULL == arg) goto usage;
 #if !defined(MSG_MIN)
-    uart_puts("<write protection");
+    con_puts("<write protection");
 #endif // !defined(MSG_MIN)
     if (0 == strdcmp("on", arg, 0)) {
-      uart_puts(" on");
+      con_puts(" on");
       wr_prt = 1;
     } else {
-      uart_puts(" off");
+      con_puts(" off");
       wr_prt = 0;
     }
 #if defined(MSG_MIN)
-    uart_putsln("");
+    con_putsln("");
 #else // defined(MSG_MIN)
-    uart_putsln(">");
+    con_putsln(">");
 #endif // defined(MSG_MIN)
     return;
 #if defined(MON_MEM)
@@ -355,14 +356,14 @@ prompt
     unsigned short n;
     n = getnum(arg);
 # if !defined(MSG_MIN)
-    uart_puts("<memory read 0x");
-    uart_puthex(n >> 8);
-    uart_puthex(n);
-    uart_putsln("> ");
+    con_puts("<memory read 0x");
+    con_puthex(n >> 8);
+    con_puthex(n);
+    con_putsln("> ");
 # endif // !defined(MSG_MIN)
     unsigned char c = sram_read(n);
-    uart_puthex(c);
-    uart_putsln("");
+    con_puthex(c);
+    con_putsln("");
     return;
   } else if (0 == strdcmp("mw", cmd, ' ')) {
     if (NULL == arg) goto usage;
@@ -374,12 +375,12 @@ prompt
     n_addr = getnum(addr);
     n_data = getnum(data);
 # if !defined(MSG_MIN)
-    uart_puts("<memory write 0x");
-    uart_puthex(n_addr >> 8);
-    uart_puthex(n_addr);
-    uart_puts(",0x");
-    uart_puthex(n_data);
-    uart_putsln(">");
+    con_puts("<memory write 0x");
+    con_puthex(n_addr >> 8);
+    con_puthex(n_addr);
+    con_puts(",0x");
+    con_puthex(n_data);
+    con_putsln(">");
 # endif // !defined(MSG_MIN)
     sram_write(n_addr, n_data);
     return;
@@ -387,74 +388,74 @@ prompt
 #if defined (MON_SDC)
   } else if (0 == strdcmp("so", cmd, 0)) {
 # if !defined(MSG_MIN)
-    uart_putsln("<sdcard open>");
+    con_putsln("<sdcard open>");
 # endif // !defined(MSG_MIN)
     char rc = sdcard_open();
-    if (rc >= 0) uart_putsln(" detect");
+    if (rc >= 0) con_putsln(" detect");
     else {
-      uart_puts(" not detect(");
-      uart_puthex(-rc);
-      uart_putsln(")");
+      con_puts(" not detect(");
+      con_puthex(-rc);
+      con_putsln(")");
     }
     return;
   } else if (0 == strdcmp("sd", cmd, 0)) {
 # if !defined(MSG_MIN)
-    uart_putsln("<sdcard dump block buffer>");
+    con_putsln("<sdcard dump block buffer>");
 # endif // !defined(MSG_MIN)
-    uart_puts(" ");
+    con_puts(" ");
     int i;
     for (i = 0; i < 512; i++) {
       char buf[17];
-      if (0 == (i & 3)) uart_putchar('_');
+      if (0 == (i & 3)) con_putchar('_');
       unsigned char rc = sdcard_read(i);
-      uart_puthex(rc);
+      con_puthex(rc);
       if ((rc < '!') || ('~' < rc)) rc = ' ';
       buf[i & 15] = rc;
       if (15 == (i & 15)) {
         buf[16] = 0;
-        uart_puts(": ");
-        uart_puts(buf);
-        uart_putsln(" ");
+        con_puts(": ");
+        con_puts(buf);
+        con_putsln(" ");
       }
     }
-    uart_puts("crc: ");
+    con_puts("crc: ");
     unsigned short crc = sdcard_crc();
-    uart_puthex(crc >> 8);
-    uart_puthex(crc);
-    uart_putsln("");
+    con_puthex(crc >> 8);
+    con_puthex(crc);
+    con_putsln("");
     return;
   } else if (0 == strdcmp("sf", cmd, ' ')) {
     if (NULL == arg) goto usage;
     unsigned long addr = getnum(arg);
 # if !defined(MSG_MIN)
-    uart_puts("<sdcard fetch block 0x");
-    uart_puthex(addr >> 8);
-    uart_puthex(addr);
-    uart_putsln(">");
+    con_puts("<sdcard fetch block 0x");
+    con_puthex(addr >> 8);
+    con_puthex(addr);
+    con_putsln(">");
 # endif // !defined(MSG_MIN)
     char rc = sdcard_fetch(addr << 9);
-    if (rc >= 0) uart_putsln(" ok");
+    if (rc >= 0) con_putsln(" ok");
     else {
-      uart_puts(" error(");
-      uart_puthex(-rc);
-      uart_putsln(")");
+      con_puts(" error(");
+      con_puthex(-rc);
+      con_putsln(")");
     }
     return;
   } else if (0 == strdcmp("ss", cmd, ' ')) {
     if (NULL == arg) goto usage;
     unsigned long addr = getnum(arg);
 # if !defined(MSG_MIN)
-    uart_puts("<sdcard store block 0x");
-    uart_puthex(addr >> 8);
-    uart_puthex(addr);
-    uart_putsln(">");
+    con_puts("<sdcard store block 0x");
+    con_puthex(addr >> 8);
+    con_puthex(addr);
+    con_putsln(">");
 # endif // !defined(MSG_MIN)
     char rc = sdcard_store(addr << 9);
-    if (rc >= 0) uart_putsln(" ok");
+    if (rc >= 0) con_putsln(" ok");
     else {
-      uart_puts(" error(");
-      uart_puthex(-rc);
-      uart_putsln(")");
+      con_puts(" error(");
+      con_puthex(-rc);
+      con_putsln(")");
     }
     return;
 #endif // defined(MON_SDC)
@@ -466,16 +467,16 @@ prompt
       char name[8 + 1 + 3 + 1];
       char attr = fat_attr();
       fat_name(name);
-      uart_putchar(' ');
-      uart_putchar((0 != (0x10 & attr))? 'd': '-');
+      con_putchar(' ');
+      con_putchar((0 != (0x10 & attr))? 'd': '-');
 # if !defined(MSG_MIN)
-      uart_putchar((0 == (0x04 & attr))? 'r': '-');
-      uart_putchar((0 == (0x01 & attr))? 'w': '-');
-      uart_putchar((0 != (0x10 & attr))? 'x': '-');
+      con_putchar((0 == (0x04 & attr))? 'r': '-');
+      con_putchar((0 == (0x01 & attr))? 'w': '-');
+      con_putchar((0 != (0x10 & attr))? 'x': '-');
 # endif // !defined(MSG_MIN)
-      uart_putchar(' ');
-      uart_puts(name);
-      uart_putsln("");
+      con_putchar(' ');
+      con_puts(name);
+      con_putsln("");
     }
     return;
   } else if (0 == strdcmp("cd", cmd, ' ')) {
@@ -504,38 +505,38 @@ prompt
   } else if (0 == strdcmp("vt", cmd, ' ')) {
     if (NULL == arg) goto usage;
 # if !defined(MSG_MIN)
-    uart_puts("<vt100 compatible mode");
+    con_puts("<vt100 compatible mode");
 # endif // !defined(MSG_MIN)
     if (0 == strdcmp("on", arg, 0)) {
-      uart_puts(" on");
+      con_puts(" on");
       vt_cnv = 1;
     } else {
-      uart_puts(" off");
+      con_puts(" off");
       vt_cnv = 0;
     }
 # if defined(MSG_MIN)
-    uart_putsln("");
+    con_putsln("");
 # else // defined(MSG_MIN)
-    uart_putsln(">");
+    con_putsln(">");
 # endif // defined(MSG_MIN)
     return;
 # if defined(EFI)
   } else if (0 == strdcmp("efi", cmd, ' ')) {
     if (NULL == arg) goto usage;
 #  if !defined(MSG_MIN)
-    uart_puts("<EFI terminal mode");
+    con_puts("<EFI terminal mode");
 #  endif // !defined(MSG_MIN)
     if (0 == strdcmp("on", arg, 0)) {
-      uart_puts(" on");
+      con_puts(" on");
       vt_cnv = 2;
     } else {
-      uart_puts(" off");
+      con_puts(" off");
       vt_cnv = 0;
     }
 #  if defined(MSG_MIN)
-    uart_putsln("");
+    con_putsln("");
 #  else // defined(MSG_MIN)
-    uart_putsln(">");
+    con_putsln(">");
 #  endif // defined(MSG_MIN)
     return;
 # endif // defined(EFI)
@@ -544,47 +545,47 @@ prompt
  usage:
 #if defined(MON_HELP)
 # if !defined(MSG_MIN)
-  uart_putsln("monitor commands");
-  uart_putsln(" r                : reset");
-  uart_putsln(" b                : boot CP/M 2.2");
-  uart_putsln(" wp <on/off>      : file system write protection");
-  uart_putsln(" a <on/off>       : auto boot");
+  con_putsln("monitor commands");
+  con_putsln(" r                : reset");
+  con_putsln(" b                : boot CP/M 2.2");
+  con_putsln(" wp <on/off>      : file system write protection");
+  con_putsln(" a <on/off>       : auto boot");
 #  if defined(MON_MEM)
-  uart_putsln(" mr <addr>        : memory read from <addr>");
-  uart_putsln(" mw <addr>,<data> : memory write <data> to <addr>");
+  con_putsln(" mr <addr>        : memory read from <addr>");
+  con_putsln(" mw <addr>,<data> : memory write <data> to <addr>");
 #  endif // defined(MON_MEM)
 #  if defined(MON_SDC)
-  uart_putsln(" so               : sdcard open");
-  uart_putsln(" sd               : sdcard dump block buffer");
-  uart_putsln(" sf <addr>        : sdcard fetch block");
-  uart_putsln(" ss <addr>        : sdcard store block");
+  con_putsln(" so               : sdcard open");
+  con_putsln(" sd               : sdcard dump block buffer");
+  con_putsln(" sf <addr>        : sdcard fetch block");
+  con_putsln(" ss <addr>        : sdcard store block");
 #  endif // defined(MON_SDC)
 #  if defined(MON_FAT)
-  uart_putsln(" ls               : file listing");
-  uart_putsln(" cd               : change directory");
-  uart_putsln(" m <filename>     : mount image disk");
+  con_putsln(" ls               : file listing");
+  con_putsln(" cd               : change directory");
+  con_putsln(" m <filename>     : mount image disk");
 #  endif // defined(MON_FAT)
 #  if defined(MON_CON)
-  uart_putsln(" vt <on/off>      : vt100 compatible mode");
+  con_putsln(" vt <on/off>      : vt100 compatible mode");
 #   if defined(EFI)
-  uart_putsln(" efi <on/off>     : EFI terminal mode");
+  con_putsln(" efi <on/off>     : EFI terminal mode");
 #   endif // defined(EFI)
 #  endif // defined(MON_CON)
 # else // !defined(MSG_MIN)
-  uart_puts("  CMD R;B;WP t;A t");
+  con_puts("  CMD R;B;WP t;A t");
 #  if defined(MON_MEM)
-  uart_puts(";MR a;MW a,d");
+  con_puts(";MR a;MW a,d");
 #  endif // defined(MON_MEM)
 #  if defined(MON_SDC)
-  uart_puts(";SO;SD;SF a;SS a");
+  con_puts(";SO;SD;SF a;SS a");
 #  endif // defined(MON_SDC)
 #  if defined(MON_FAT)
-  uart_puts(";LS;CD s;M s");
+  con_puts(";LS;CD s;M s");
 #  endif // defined(MON_FAT)
 #  if defined(MON_CON)
-  uart_puts(";VT t");
+  con_puts(";VT t");
 #  endif // defined(MON_CON)
-  uart_putsln("");
+  con_putsln("");
 # endif // !defined(MSG_MIN)
 #endif // defined(MON_HELP)
   return;
@@ -637,51 +638,51 @@ mem_chk
     }
     if (0 != err) {
 #if defined(CHK_MIN)
-      uart_puts("ERR: ");
+      con_puts("ERR: ");
 #else // defined(CHK_MIN)
-      if (0 == test) uart_puts("write failed at 0x");
-      else uart_puts("address failed at 0x");
+      if (0 == test) con_puts("write failed at 0x");
+      else con_puts("address failed at 0x");
 #endif // defined(CHK_MIN)
-      uart_puthex(addr >> 8);
-      uart_puthex(addr);
+      con_puthex(addr >> 8);
+      con_puthex(addr);
 #if defined(CHK_MIN)
-      uart_putsln("");
+      con_putsln("");
 #else // defined(CHK_MIN)
-      uart_puts(" (");
-      if (0 == test) uart_puthex(err);
-      else uart_puthex(c);
-      uart_putsln(")");
+      con_puts(" (");
+      if (0 == test) con_puthex(err);
+      else con_puthex(c);
+      con_putsln(")");
 #endif // defined(CHK_MIN)
       return;
     }
     if (0xfff == (addr & 0xfff)) {
 #if defined(MSG_MIN)
 # if defined(CHK_MIN)
-      if (0 != test) uart_puts("MEM: ");
+      if (0 != test) con_puts("MEM: ");
 # else // defined(CHK_MIN)
-      if (0 == test) uart_puts("mem wrt: ");
-      else uart_puts("mem adr: ");
+      if (0 == test) con_puts("mem wrt: ");
+      else con_puts("mem adr: ");
 # endif // defined(CHK_MIN)
 #else // defined(MSG_MIN)
-      if (0 == test) uart_puts("memory write test: ");
-      else uart_puts("memory address test: ");
+      if (0 == test) con_puts("memory write test: ");
+      else con_puts("memory address test: ");
 #endif // defined(MSG_MIN)
 #if defined(CHK_MIN)
       if (0 != test) {
-        uart_putnum_u16(addr, 5);
-        uart_puts("/65535\r");
+        con_putnum_u16(addr, 5);
+        con_puts("/65535\r");
       }
 #else // defined(CHK_MIN)
-      uart_putnum_u16(addr, 5);
-      uart_puts("/65535\r");
+      con_putnum_u16(addr, 5);
+      con_puts("/65535\r");
 #endif // defined(CHK_MIN)
     }
     if (0xffff == addr) {
       test++;
 #if defined(CHK_MIN)
-      if (0 != test) uart_puts("\n");
+      if (0 != test) con_puts("\n");
 #else // !defined(CHK_MIN)
-      uart_puts("\n");
+      con_puts("\n");
 #endif // !defined(CHK_MIN)
     }
   }
@@ -709,7 +710,7 @@ out
       if ('=' == val) esc = 2;
       else if (';' == val) {
         if (vt_cnv == 1) {
-          uart_puts("\e[2J");
+          con_puts("\e[2J");
 #if defined(EFI)
         } else {
           uefi_call_wrapper(efi_systab->ConOut->ClearScreen, 1,
@@ -721,8 +722,8 @@ out
       break;
     case 2:
       if (vt_cnv == 1) {
-        uart_puts("\e[");
-        uart_putnum_u16(val - 0x20 + 1, -1);
+        con_puts("\e[");
+        con_putnum_u16(val - 0x20 + 1, -1);
 #if defined(EFI)
       } else {
         row = val - 0x20;
@@ -732,9 +733,9 @@ out
       break;
     case 3:
       if (vt_cnv == 1) {
-        uart_putchar(';');
-        uart_putnum_u16(val - 0x20 + 1, -1);
-        uart_putchar('H');
+        con_putchar(';');
+        con_putnum_u16(val - 0x20 + 1, -1);
+        con_putchar('H');
 #if defined(EFI)
       } else {
         INT64 column = val - 0x20;
@@ -745,11 +746,11 @@ out
       esc = 0;
       break;
     default:
-      if (0 == vt_cnv) uart_putchar(val);
+      if (0 == vt_cnv) con_putchar(val);
       else {
         if (0x1a == val) {
           if (vt_cnv == 1) {
-            uart_puts("\e[2J");
+            con_puts("\e[2J");
 #if defined(EFI)
           } else {
             uefi_call_wrapper(efi_systab->ConOut->ClearScreen, 1,
@@ -757,7 +758,7 @@ out
 #endif // defined(EFI)
           }
         } else if (0x1b == val) esc = 1;
-        else uart_putchar(val);
+        else con_putchar(val);
       }
     }
     break;
@@ -790,6 +791,9 @@ out
   case 16:
     dma_hi = val;
     break;
+  default:
+    io_out(port, val);
+    break;
   }
 }
 
@@ -798,31 +802,31 @@ in
 (unsigned char port)
 {
   if (0 == port) {
-    if (0 != uart_peek()) return 0xff;
+    if (0 != con_peek()) return 0xff;
     return 0;
   } else if (1 == port) {
     int c;
     do {
-      c = uart_getchar();
+      c = con_getchar();
     } while (-1 == c);
     return c;
   } else if (14 == port) {
     return 0;
   }
-  return 0;
+  return io_in(port);
 }
 
 int
 machine_boot
 (void)
 {
-  uart_init();
+  con_init();
   sram_init();
   sdcard_init();
 #if defined(MSG_MIN)
-  uart_putsln("\r\nCP/Mega88");
+  con_putsln("\r\nCP/Mega88");
 #else // defined(MSG_MIN)
-  uart_putsln("\r\nbooting CP/Mega88 done.");
+  con_putsln("\r\nbooting CP/Mega88 done.");
 #endif // defined(MSG_MIN)
 #if defined(CLR_MEM)
   mem_clr();
@@ -831,28 +835,28 @@ machine_boot
   mem_chk();
 #endif // defined(MON_MEM) || defined(CHK_MEM)
   char rc = sdcard_open();
-  if (rc >= 0) uart_putsln("SDC: ok");
+  if (rc >= 0) con_putsln("SDC: ok");
 #if !defined(MSG_MIN)
   else {
-    uart_puts("SDC: err(");
-    uart_puthex(-rc);
-    uart_putsln(")");
+    con_puts("SDC: err(");
+    con_puthex(-rc);
+    con_putsln(")");
   }
 #endif // !defined(MSG_MIN);
 #if defined(USE_FAT)
   rc = fat_init();
   if (rc >= 0) {
-    uart_puts("FAT: ");
-    if ((4 == rc) || (6 == rc)) uart_puts("FAT16");
-    else if (0xb == rc) uart_puts("FAT32");
-    else uart_puthex(rc);
-    uart_putsln("");
+    con_puts("FAT: ");
+    if ((4 == rc) || (6 == rc)) con_puts("FAT16");
+    else if (0xb == rc) con_puts("FAT32");
+    else con_puthex(rc);
+    con_putsln("");
     sd_fat = 1;
   } else {
 #if !defined(MSG_MIN)
-    uart_puts("FAT: ");
-    uart_puthex(-rc);
-    uart_putsln("");
+    con_puts("FAT: ");
+    con_puthex(-rc);
+    con_putsln("");
     sd_fat = 0;
 #endif // !defined(MSG_MIN);
   }
@@ -864,12 +868,12 @@ machine_boot
   work.out = &out;
 #endif // defined(CPU_EMU_C)
   if (0x88 != eeprom_read(0)) {
-    uart_putsln("EEPROM: init");
+    con_putsln("EEPROM: init");
     int i;
     for (i = 0; i < 256; i++) eeprom_write(i, 0);
     eeprom_write(0, 0x88);
   } else {
-    uart_putsln("EEPROM: load");
+    con_putsln("EEPROM: load");
     if (0x88 == eeprom_read(16)) {
       char buf[8 + 1 + 3 + 1];
       eeprom_read_string(17, buf);
@@ -880,9 +884,9 @@ machine_boot
 #if defined(MONITOR)
   for (;;) prompt();
 #else // defined(MONITOR)
-  uart_putsln("starting CP/M 2.2 for ATmega88 with i8080 emulation");
+  con_putsln("starting CP/M 2.2 for ATmega88 with i8080 emulation");
 #if defined(CPM_DEBUG)
-  while (-1 == uart_getchar());
+  while (-1 == con_getchar());
 #endif // defined(CPM_DEBUG)
   boot();
 #endif // defined(MONITOR)

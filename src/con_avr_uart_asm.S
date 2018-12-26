@@ -29,18 +29,25 @@
  * DAMAGE.
  */
 
-	.arch atmega88
 	.text
 
+#if defined(MCU_32U4) || defined(MCU_32U2)
+.equ	PORT,11
+.equ	PIN,9
+.equ	RX,2
+.equ	TX,3
+#else
 .equ	PORT,8
 .equ	PIN,6
 .equ	RX,0
 .equ	TX,1
+#endif
 
 	.type	wait, @function
 wait:
+#if defined(CLK_20MHZ)
 	/*
-	 * (521 - 59) / 4 = 116 cycle wait
+	 * (521 - 59) / 4 = 116 cycle wait for 38400bps
 	 *  1 + (3 x 34 - 1) + 10 + 4
 	 */
 	ldi r23, 34	/* 1   */
@@ -63,19 +70,63 @@ wait:
 	dec r22		/* 1   */
 	nop		/* 1   */
 3:	ret		/* 4   */
+#elif defined(CLK_16MHZ)
+	/*
+	 * (417 - 59) / 4 = 90 cycle wait for 38400bps
+	 *  1 + (3 x 25 - 1) + 11 + 4
+	 */
+	ldi r23, 27	/* 1   */
+1:	dec r23		/* 1   */
+	brne 1b		/* 1/2 */
+	cp r19, r20	/* 1   */
+	breq 2f		/* 1/2 */
+	nop		/* 1   */
+	nop		/* 1   */
+	nop		/* 1   */
+	nop		/* 1   */
+	nop		/* 1   */
+	nop		/* 1   */
+	nop		/* 1   */
+	rjmp 3f		/* 2   */
+2:	in r0, PIN	/* 1   */
+	clc		/* 1   */
+	sbrc r0, RX	/* 1/2 */
+	sec		/* 1   */
+	ror r21		/* 1   */
+	dec r22		/* 1   */
+	nop		/* 1   */
+	nop		/* 1   */
+3:	ret		/* 4   */
+#else
+# error
+#endif
 	.size wait, .-wait
 
 	.type	x4wait, @function
 x4wait:
+#if defined(CLK_20MHZ)
 	/*
-	 * 521 - 11 = 510 cycle wait
-	 *  1 + (3 x 168 - 1) + 1 + 4
+	 * 521 - 11 = 510 cycle wait for 38400bps
+	 *  1 + (3 x 168 - 1) + 2 + 4
 	 */
 	ldi r23, 168	/* 1   */
 1:	dec r23		/* 1   */
 	brne 1b		/* 1/2 */
 	nop		/* 1   */
+	nop		/* 1   */
 	ret		/* 4   */
+#elif defined(CLK_16MHZ)
+	/*
+	 * 417 - 11 = 406 cycle wait for 38400bps
+	 *  1 + (3 x 134 - 1) + 4
+	 */
+	ldi r23, 134	/* 1   */
+1:	dec r23		/* 1   */
+	brne 1b		/* 1/2 */
+	ret		/* 4   */
+#else
+# error
+#endif
 	.size x4wait, .-x4wait
 
 .global uart_tx

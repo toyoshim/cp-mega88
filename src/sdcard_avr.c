@@ -36,11 +36,17 @@
 #define PORT PORTC
 #define DDR  DDRC
 #define PIN  PINC
-#define P_CK _BV(PC2)
-#define P_DI _BV(PC3)
-#define P_PU _BV(PC4)
-#define P_DO _BV(PC4)
-#define P_CS _BV(PC5)
+#define P_CK _BV(PINC2)
+#if defined(MCU_88)
+# define P_DI _BV(PINC3)
+#elif defined(MCU_32U2)
+# define P_DI _BV(PINC6)
+#else
+# error
+#endif
+#define P_PU _BV(PINC4)
+#define P_DO _BV(PINC4)
+#define P_CS _BV(PINC5)
 
 static unsigned char
 buffer[512];

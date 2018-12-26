@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, Takashi TOYOSHIMA <toyoshim@gmail.com>
+# Copyright (c) 2018, Takashi TOYOSHIMA <toyoshim@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,25 +29,44 @@
 # DAMAGE.
 #
 
-CC	= i686-nacl-gcc
-CXX	= i686-nacl-g++
-FSFLAGS	= `../third_party/naclfs/bin/naclfs-config --cflags newlib-i686`
-CFLAGS	= -O0 -g -Wall -m32 -pthread -DTEST -I.. $(FSFLAGS)
-CXXFLAGS= -O0 -g -Wall -m32 -pthread -I ../src $(FSFLAGS)
-LDFLAGS	= `../third_party/naclfs/bin/naclfs-config --libs newlib-i686`
-TARGET	= ../native_client/cpmega88_x86_32.nexe
+CC	= avr-gcc
+OBJCOPY	= avr-objcopy
+HIDSPX	= hidspx
+MCU	= atmega32u2
+AFLAGS	= -Xassembler -I../src -mmcu=$(MCU) -DMCU_32U2 -DCLK_16MHZ
+CFLAGS	= -Os -Wall -mmcu=$(MCU) -mtiny-stack -DMCU_32U2
+SFLAGS	= --mcu=$(MPU)
+HFLAGS	= -d2
+TARGET	= cpmega88
+OBJS	= platform_avr.o machine.o con_base.o con_avr_cdc.o \
+	  con_avr_uart_asm.o sram_avr.o sram_asm.o sdcard_base.o sdcard_avr.o \
+	  fat.o eeprom_base.o eeprom_avr.o io_base.o i8080.o
 
-all: $(TARGET)
+all: $(TARGET).hex
 
-OBJS	= platform_nacl.o machine.o con_base.o con_posix.o sram_base.o \
-	  sdcard_base.o sdcard_posix.o fat.o eeprom_base.o eeprom_image.o \
-	  eeprom_posix.o io_base.o cpu_8080.o
+size: $(TARGET).elf
+	$(SIZE) $(SFLAGS) $(TARGET).elf
+
+spx: all
+	$(HIDSPX) $(HFLAGS) $(TARGET).hex
+
+%.hex: %.elf
+	$(OBJCOPY) -O ihex $< $@
+
+%.bin: %.elf
+	$(OBJCOPY) -j .text -j .data -O binary $< $@
 
 %.o: ../src/%.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 
-%.o: ../src/%.cc
-	$(CXX) -c $(CXXFLAGS) -o $@ $<
+%.o: ../src/%.s
+	$(CC) -c $(AFLAGS) -o $@ $<
+
+%.o: ../src/%.S
+	$(CC) -c $(AFLAGS) -o $@ $<
+
+$(TARGET).elf: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
 
 $(TARGET): $(OBJS)
-	$(CXX) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $@ $^

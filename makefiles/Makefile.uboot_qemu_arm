@@ -57,7 +57,7 @@ LDFLAGS	= -g -Ttext 0x0c100000
 TARGET	= cpmega88
 OBJS	= platform_uboot.o machine.o uart_base.o uart_uboot.o sram_base.o \
 	  sdcard_base.o sdcard_uboot.o fat.o eeprom_base.o eeprom_image.o \
-	  eeprom_uboot.o cpu_8080.o
+	  eeprom_uboot.o io_base.o cpu_8080.o
 UBOOT	= ../third_party/u-boot
 
 all: $(TARGET).srec $(TARGET).bin

@@ -29,30 +29,16 @@
  * DAMAGE.
  */
 
-	.include "sram_mac.s"
-	.text
+#if !defined(__con_h__)
+# define __con_h__
 
-.global sram_read
-	.type	sram_read, @function
-sram_read:
-	/*
-	 * r25: address high
-	 * r24: address low
-	 *   18 cycles + rcall(3 cycles)
-	 */
-	_sram_read
-	ret
-	.size sram_read, .-sram_read
+void con_init(void);
+void con_putchar(unsigned char c);
+int con_getchar(void);
+int con_peek(void);
+void con_puthex(unsigned char c);
+void con_putnum_u16(unsigned short n, int digit);
+void con_puts(char *s);
+void con_putsln(char *s);
 
-.global sram_write
-	.type	sram_write, @function
-sram_write:
-	/*
-	 * r25: address high
-	 * r24: address low
-	 * r22: data
-	 *   14 cycles + rcall(3 cycles)
-	 */
-	_sram_write
-	ret
-	.size sram_write, .-sram_write
+#endif // !defined(__con_h__)

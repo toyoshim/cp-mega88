@@ -29,63 +29,115 @@
  * DAMAGE.
  */
 
-#include "uart.h"
+#include "con.h"
 
-#include <efi.h>
-#include <wchar.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
 
-extern EFI_SYSTEM_TABLE* efi_systab;
+extern unsigned short uart_tx(unsigned char);
+extern unsigned char uart_rx(void);
 
-void
-uart_init
+static void
+reset_int
 (void)
 {
+  PCIFR |= _BV(PCIF1);	// Reset PCINT1 Flag
 }
 
-void
-uart_putchar
+static void
+enable_int
+(void)
+{
+  PCICR |= _BV(PCIE1);	// Enable PCINT1
+}
+
+static void
+disable_int
+(void)
+{
+  PCICR &= ~_BV(PCIE1);	// Disable PCINT1
+}
+
+static unsigned char
+fifo[8];
+
+static unsigned char
+fifo_rdptr = 0;
+
+static unsigned char
+fifo_wrptr = 0;
+
+static void
+uart_push
 (unsigned char c)
 {
-  wchar_t s[2];
-  s[0] = c;
-  s[1] = 0;
-  uefi_call_wrapper(efi_systab->ConOut->OutputString, 2, efi_systab->ConOut, s);
-}
-
-int
-uart_getchar
-(void)
-{
-  EFI_EVENT event[1];
-  UINTN index;
-  EFI_INPUT_KEY key;
-  event[0] = efi_systab->ConIn->WaitForKey;
-  uefi_call_wrapper(
-      efi_systab->BootServices->WaitForEvent, 3, 1, event, &index);
-  uefi_call_wrapper(
-      efi_systab->ConIn->ReadKeyStroke, 2, efi_systab->ConIn, &key);
-  return key.UnicodeChar;
-}
-
-int
-uart_peek
-(void)
-{
-  EFI_EVENT event[2];
-  UINTN index;
-  event[0] = efi_systab->ConIn->WaitForKey;
-  EFI_STATUS status = uefi_call_wrapper(
-      efi_systab->BootServices->CreateEvent, 5,
-      EVT_TIMER, 0, NULL, NULL, &event[1]);
-  if (EFI_ERROR(status)) return 0;
-  status = uefi_call_wrapper(
-      efi_systab->BootServices->SetTimer, 3, event[1], TimerRelative, 0);
-  if (!EFI_ERROR(status)) {
-    status = uefi_call_wrapper(
-        efi_systab->BootServices->WaitForEvent, 3, 2, event, &index);
+  if (fifo_rdptr != (fifo_wrptr + 1)) {
+    fifo[fifo_wrptr++] = c;
+    fifo_wrptr &= 7;
   }
-  uefi_call_wrapper(
-      efi_systab->BootServices->CloseEvent, 1, event[1]);
-  if (EFI_ERROR(status) || index == 1) return 0;
-  return 1;
+}
+
+static void
+uart_int
+(void)
+{
+  disable_int();
+  uart_push(uart_rx());
+  reset_int();
+  enable_int();
+}
+
+ISR
+(PCINT1_vect)
+{
+  uart_int();
+}
+
+void
+con_init
+(void)
+{
+  /*
+   * PC0: RXD
+   * PC1: TXD
+   */
+  // Port Settings
+  DDRC   &= ~_BV(DDC0);		// PC0: Input
+  PORTC  |=  _BV(DDC0);		//      Pull-up
+  DDRC   |=  _BV(DDC1);		// PC1: Output
+
+  PCMSK1 |=  _BV(PCINT8);	// PC0 cause PCINT1
+
+  SREG   |=  _BV(SREG_I);	// Enable Interrupt
+
+  enable_int();
+}
+
+void
+con_putchar
+(unsigned char c)
+{
+  disable_int();
+  unsigned short rc = uart_tx(c);
+  if (0 != rc) uart_push(rc);
+  reset_int();
+  enable_int();
+  if (0 == (PINC & _BV(DDC0))) uart_int();
+}
+
+int
+con_getchar
+(void)
+{
+  if (fifo_rdptr == fifo_wrptr) return -1;
+  int rc = fifo[fifo_rdptr++];
+  fifo_rdptr &= 7;
+  return rc;
+}
+
+int
+con_peek
+(void)
+{
+  return (fifo_wrptr - fifo_rdptr) & 7;
 }

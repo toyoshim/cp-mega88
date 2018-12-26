@@ -29,115 +29,52 @@
  * DAMAGE.
  */
 
-#include "uart.h"
-
-#include <avr/io.h>
-#include <avr/interrupt.h>
-
-extern unsigned short uart_tx(unsigned char);
-extern unsigned char uart_rx(void);
+#include "con.h"
 
 static void
-reset_int
-(void)
-{
-  PCIFR |= _BV(PCIF1);	// Reset PCINT1 Flag
-}
-
-static void
-enable_int
-(void)
-{
-  PCICR |= _BV(PCIE1);	// Enable PCINT1
-}
-
-static void
-disable_int
-(void)
-{
-  PCICR &= ~_BV(PCIE1);	// Disable PCINT1
-}
-
-static unsigned char
-fifo[8];
-
-static unsigned char
-fifo_rdptr = 0;
-
-static unsigned char
-fifo_wrptr = 0;
-
-static void
-uart_push
+put_halfhex
 (unsigned char c)
 {
-  if (fifo_rdptr != (fifo_wrptr + 1)) {
-    fifo[fifo_wrptr++] = c;
-    fifo_wrptr &= 7;
+  if (c < 10) con_putchar('0' + c);
+  else con_putchar('A' - 10 + c);
+}
+
+void
+con_puthex
+(unsigned char c)
+{
+  put_halfhex(c >> 4);
+  put_halfhex(c & 15);
+}
+
+void
+con_putnum_u16
+(unsigned short n, int digit)
+{
+  unsigned short d = 10000;
+  if (digit > 0) {
+    d = 1;
+    for (digit--; digit > 0; digit--) d *= 10;
   }
-}
-
-static void
-uart_int
-(void)
-{
-  disable_int();
-  uart_push(uart_rx());
-  reset_int();
-  enable_int();
-}
-
-ISR
-(PCINT1_vect)
-{
-  uart_int();
+  do {
+    int num = n / d;
+    n = n % d;
+    d /= 10;
+    con_putchar('0' + num);
+  } while (0 != d);
 }
 
 void
-uart_init
-(void)
+con_puts
+(char *s)
 {
-  /*
-   * PC0: RXD
-   * PC1: TXD
-   */
-  // Port Settings
-  DDRC   &= ~_BV(DDC0);		// PC0: Input
-  PORTC  |=  _BV(DDC0);		//      Pull-up
-  DDRC   |=  _BV(DDC1);		// PC1: Output
-
-  PCMSK1 |=  _BV(PCINT8);	// PC0 cause PCINT1
-
-  SREG   |=  _BV(SREG_I);	// Enable Interrupt
-
-  enable_int();
+  while (0 != *s) con_putchar(*s++);
 }
 
 void
-uart_putchar
-(unsigned char c)
+con_putsln
+(char *s)
 {
-  disable_int();
-  unsigned short rc = uart_tx(c);
-  if (0 != rc) uart_push(rc);
-  reset_int();
-  enable_int();
-  if (0 == (PINC & _BV(DDC0))) uart_int();
-}
-
-int
-uart_getchar
-(void)
-{
-  if (fifo_rdptr == fifo_wrptr) return -1;
-  int rc = fifo[fifo_rdptr++];
-  fifo_rdptr &= 7;
-  return rc;
-}
-
-int
-uart_peek
-(void)
-{
-  return (fifo_wrptr - fifo_rdptr) & 7;
+  con_puts(s);
+  con_puts("\r\n");
 }

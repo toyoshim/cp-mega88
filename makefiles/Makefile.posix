@@ -32,9 +32,9 @@
 CC	= gcc
 CFLAGS	= -O0 -Wall -DTEST
 TARGET	= cpmega88
-OBJS	= platform_posix.o machine.o uart_base.o uart_posix.o sram_base.o \
+OBJS	= platform_posix.o machine.o con_base.o con_posix.o sram_base.o \
 	  sdcard_base.o sdcard_posix.o fat.o eeprom_base.o eeprom_image.o \
-	  eeprom_posix.o cpu_8080.o
+	  eeprom_posix.o io_base.o cpu_8080.o
 
 all: $(TARGET)
 

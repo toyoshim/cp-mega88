@@ -29,35 +29,35 @@
  * DAMAGE.
  */
 
-#include "uart.h"
+#include "con.h"
 
 #include <ansi.h>
 #include <common.h>
 #include <exports.h>
 
 void
-uart_init
+con_init
 (void)
 {
   printf(ANSI_CLEAR_CONSOLE);
 }
 
 void
-uart_putchar
+con_putchar
 (unsigned char c)
 {
   putc(c);
 }
 
 int
-uart_getchar
+con_getchar
 (void)
 {
   return getc();
 }
 
 int
-uart_peek
+con_peek
 (void)
 {
   return tstc();

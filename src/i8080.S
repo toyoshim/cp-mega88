@@ -29,9 +29,12 @@
  * DAMAGE.
  */
 
-	.arch atmega88
 	.include "sram_mac.s"
 //	.include "sram_test.s"
+
+#if defined(MCU_88)
+# define call rcall
+#endif
 
 #define reg_a r17
 #define reg_f r16
@@ -1531,7 +1534,7 @@ out_op:		// 0xd3
 	push_regs
 	mov r24, reg_mem_r
 	mov r22, reg_a
-	rcall out
+	call out
 	pop_regs
 	rjmp fetch_next
 
@@ -1574,7 +1577,7 @@ in_op:		// 0xdb
 	rcall fetch_op
 	push_regs
 	mov r24, reg_mem_r
-	rcall in
+	call in
 	mov reg_a, r24
 	pop_regs
 	rjmp fetch_next

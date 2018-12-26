@@ -29,7 +29,7 @@
  * DAMAGE.
  */
 
-#include "uart.h"
+#include "con.h"
 
 #if defined(__native_client__)
 # include "platform_nacl.h"
@@ -77,7 +77,7 @@ sleep
 
 #if defined(HAVE_SIGNAL_H)
 void
-uart_term
+con_term
 (int num)
 {
 #if defined(HAVE_TERMIOS_H)
@@ -90,7 +90,7 @@ uart_term
 #endif // defined(HAVE_SIGNAL_H)
 
 void
-uart_init
+con_init
 (void)
 {
 #if defined(HAVE_TERMIOS_H)
@@ -100,7 +100,7 @@ uart_init
   org_flags = fcntl(0, F_GETFL, 0);
 
 #if defined(HAVE_SIGNAL_H)
-  signal(SIGTERM, uart_term);
+  signal(SIGTERM, con_term);
 #endif // defined(HAVE_SIGNAL_H)
 
 #if defined(HAVE_TERMIOS_H)
@@ -117,7 +117,7 @@ uart_init
 }
 
 void
-uart_putchar
+con_putchar
 (unsigned char c)
 {
   fputc((int)c, stdout);
@@ -125,10 +125,10 @@ uart_putchar
 }
 
 int
-uart_getchar
+con_getchar
 (void)
 {
-  if (-1 == fifo_flag) uart_peek();
+  if (-1 == fifo_flag) con_peek();
   if (-1 != fifo_flag) {
     int rc = fifo_flag;
     fifo_flag = -1;
@@ -138,7 +138,7 @@ uart_getchar
 }
 
 int
-uart_peek
+con_peek
 (void)
 {
   sleep();
