@@ -60,6 +60,9 @@ cur_blk = 0;
 static unsigned char
 ccs = 0;
 
+static unsigned char
+sdc_version = 2;
+
 static void
 sd_out
 (char c)
@@ -87,7 +90,7 @@ sd_busy
   return -1;
 }
 
-static char
+static unsigned long
 sd_in
 (char n)
 {
@@ -101,26 +104,26 @@ sd_in
     rc <<= 1;
     if (0 != (c & P_DO)) rc |= 1;
   }
- if (n==39) return (rc >> 24);		// we want bit 30 in response R3 (CCS)
- else return rc;
+  return rc;
 }
 
-static char
+static unsigned long
 sd_cmd
 (char cmd, char arg0, char arg1, char arg2, char arg3, char crc)
 {
   PORT = (PORT | P_DI | P_CK) & ~P_CS;
-  sd_out(0xff);
-  sd_out(cmd);
+  if (sdc_version > 1)
+    sd_out(cmd);
   sd_out(arg0);
   sd_out(arg1);
   sd_out(arg2);
   sd_out(arg3);
   sd_out(crc);
   PORT |= P_DI;
-  if (sd_busy(0) < 0) return -1;
-  else if ((0x48 == cmd) || (0x7a == cmd)) return sd_in(39);
-  else return sd_in(7);
+  if (sd_busy(0) < 0) return 0xffffffff;
+  else if (0x48 == cmd) return sd_in(39);  // R7
+  else if (0x7a == cmd) return sd_in(39);  // R3
+  else return sd_in(7);  // R1
 }
 
 void
@@ -152,29 +155,38 @@ sdcard_open
     PORT &= ~P_CK;
     PORT |=  P_CK;
   }
-  char rc;
-  // cmd0
+  unsigned long rc;
+  // cmd0 - GO_IDLE_STATE (response R1)
   rc = sd_cmd(0x40, 0x00, 0x00, 0x00, 0x00, 0x95);
   if (1 != rc) return -1;
 
-  // cmd8			SEND_IF_COND (response R7 is ignored)
+  // cmd8 - SEND_IF_COND (response R7)
+  sdc_version = 2;
   rc = sd_cmd(0x48, 0x00, 0x00, 0x01, 0x0aa, 0x87);
-
-  do {
-  // cmd55		APP_CMD (response R1)
-   rc = sd_cmd(0x77, 0x00, 0x00, 0x00, 0x00, 0x01);
-  
-  // acmd41		SD_SEND_OP_COND (response R1)
-  rc = sd_cmd(0x69, 0x40, 0x00, 0x00, 0x00, 0x77);
-  } while (0 != rc);			// no errors, no idle
-  
-  do 
-  // cmd58		READ_OCR (response R3)
-  rc = sd_cmd(0x7a, 0x00, 0x00, 0x00, 0x00, 0xfd);
-  while ( 0 == (rc & 0x80));		// card powerup not completed
- 
+  if ((rc & 0x00000fff) != 0x1aa) {
+    // SDC v2 initialization failed, try legacy command.
+    // cmd1 - SEND_OP_COND (response R1)
+    sdc_version = 1;
+    for (;;) {
+      rc = sd_cmd(0x41, 0x00, 0x00, 0x00, 0x00, 0x00);
+      if (0 == rc) break;
+      if (0xffffffff == rc) return -2;
+    }
+    if (0 != rc) return -3;
+  } else {
+    do {
+      // cmd55 - APP_CMD (response R1)
+      rc = sd_cmd(0x77, 0x00, 0x00, 0x00, 0x00, 0x01);
+      // acmd41 - SD_SEND_OP_COND (response R1)
+      rc = sd_cmd(0x69, 0x40, 0x00, 0x00, 0x00, 0x77);
+    } while (0 != rc);  // no errors, no idle
+    do {
+      // cmd58 - READ_OCR (response R3)
+      rc = sd_cmd(0x7a, 0x00, 0x00, 0x00, 0x00, 0xfd);
+    } while (0 == (rc & 0x80000000));  // card powerup not completed
+    ccs = (rc & 0x40000000) ? 1 : 0; // ccs bit high means SDHC card
+  }
   PORT &= ~P_CK;
-  ccs = rc & 64;			// ccs bit high means SDHC card
   return 0;
 }
 
@@ -184,7 +196,8 @@ sdcard_fetch
 {
   if (0 != ccs) blk_addr >>= 9; // SDHC cards use block addresses
   // cmd17
-  char rc = sd_cmd(0x51, blk_addr >> 24, blk_addr >> 16, blk_addr >> 8, blk_addr, 0x00);
+  unsigned long rc =
+    sd_cmd(0x51, blk_addr >> 24, blk_addr >> 16, blk_addr >> 8, blk_addr, 0x00);
   if (0 != rc) return -1;
   if (sd_busy(0) < 0) return -2;
   int i;
@@ -203,10 +216,11 @@ sdcard_fetch
 int
 sdcard_store
 (unsigned long blk_addr)
-{ 
-  if (0 == ccs) blk_addr >>= 9; // SDHC card
+{
+  if (0 == ccs) blk_addr >>= 9; // SDHC cards use block addresses
   // cmd24
-  char rc = sd_cmd(0x58, blk_addr >> 24, blk_addr >> 16, blk_addr >> 8, blk_addr, 0x00);
+  unsigned long rc =
+    sd_cmd(0x58, blk_addr >> 24, blk_addr >> 16, blk_addr >> 8, blk_addr, 0x00);
   if (0 != rc) return -1;
   sd_out(0xff); // blank 1B
   sd_out(0xfe); // Data Token

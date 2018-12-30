@@ -63,22 +63,14 @@ static unsigned short
 read2
 (unsigned short off)
 {
-  unsigned short rc =
-    (sdcard_read(off + 1) <<  8) |
-    (sdcard_read(off + 0) <<  0);
-  return rc;
+  return (sdcard_read(off + 1) <<  8) | sdcard_read(off);
 }
 
 static unsigned long
 read4
 (unsigned short off)
 {
-  unsigned long rc =
-    ((unsigned long)sdcard_read(off + 3) << 24) |
-    ((unsigned long)sdcard_read(off + 2) << 16) |
-    (sdcard_read(off + 1) <<  8) |
-    (sdcard_read(off + 0) <<  0);
-  return rc;
+  return ((unsigned long)read2(off + 2) << 16) | read2(off);
 }
 
 static int
@@ -93,13 +85,15 @@ fetch_cluster
   if (0 == cluster) sector = dir_sector + (offset >> 9);
   else {
     while (offset > (sectors_per_cluster << 9)) {
-      unsigned long pos = ((fat_first_sect + reserved_sectors) << 9) + (cluster << 1);
+      unsigned long pos =
+          ((fat_first_sect + reserved_sectors) << 9) + (cluster << 1);
       if (sdcard_fetch(pos & 0xfffffe00) < 0) return -1;
       cluster = read2(pos & 0x000001ff);
       if ((cluster < 2) || (0xfff7 <= cluster)) return -2;
       offset -= (sectors_per_cluster << 9);
     }
-    unsigned long cluster_sect = dir_sector  +  (unsigned long)(dir_size + cluster - 2) * sectors_per_cluster;
+    unsigned long cluster_sect = dir_sector +
+        (unsigned long)(dir_size + cluster - 2) * sectors_per_cluster;
     sector = cluster_sect + (offset >> 9);
   }
   return sdcard_fetch(sector << 9);
@@ -126,8 +120,11 @@ fat_init
   reserved_sectors = read2(OFF_SCT_RSV);
   sectors_per_cluster = sdcard_read(OFF_SCT_P_C);
   dir_entries = read2(OFF_ROOTNUM);
-  dir_sector = fat_first_sect + reserved_sectors + sectors_per_fat * number_of_fats;
-  dir_size =  ((unsigned short)(dir_entries  >> 4 ) + sectors_per_cluster -1) / sectors_per_cluster;
+  dir_sector =
+      fat_first_sect + reserved_sectors + sectors_per_fat * number_of_fats;
+  dir_size =
+      ((unsigned short)(dir_entries >> 4) + sectors_per_cluster - 1) /
+      sectors_per_cluster;
 
   if (512 != bytes_per_sector) return -5;
 
@@ -149,7 +146,8 @@ fat_next
 {
   for (dir_offset++; dir_offset < dir_entries; dir_offset++) {
     unsigned short off = dir_offset % 16;
-    if (fetch_cluster(dir_cluster, ((unsigned long)dir_offset << 5)) < 0) return -2;
+    if (fetch_cluster(dir_cluster, ((unsigned long)dir_offset << 5)) < 0)
+      return -2;
     unsigned char first_char = sdcard_read(off << 5);
     if (0 == first_char) continue;
     if (0 != (0x80 & first_char)) continue;

@@ -34,7 +34,7 @@ OBJCOPY	= avr-objcopy
 HIDSPX	= hidspx
 MCU	= atmega88
 AFLAGS	= -Xassembler -I../src -mmcu=$(MCU) -DMCU_88 -DCLK_20MHZ
-CFLAGS	= -Os -Wall -mmcu=$(MCU) -mtiny-stack -DMCU_88
+CFLAGS	= -Os -flto -Wall -mmcu=$(MCU) -mtiny-stack -DMCU_88
 SFLAGS	= --mcu=$(MPU)
 HFLAGS	= -d2
 TARGET	= cpmega88
