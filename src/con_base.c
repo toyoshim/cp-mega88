@@ -66,14 +66,14 @@ con_putnum_u16
 
 void
 con_puts
-(char *s)
+(const char *s)
 {
   while (0 != *s) con_putchar(*s++);
 }
 
 void
 con_putsln
-(char *s)
+(const char *s)
 {
   con_puts(s);
   con_puts("\r\n");

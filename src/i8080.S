@@ -29,7 +29,7 @@
  * DAMAGE.
  */
 
-	.include "sram_mac.s"
+	.include "sram_avr_asm_macro.s"
 //	.include "sram_test.s"
 
 #if defined(MCU_88)

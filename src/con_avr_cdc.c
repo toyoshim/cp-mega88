@@ -32,6 +32,7 @@
 #include "con.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/pgmspace.h>
 
 #if !defined(MCU_32U2) && !defined(MCU_32U4)
 # error not supported mcu
@@ -90,16 +91,16 @@ enum {
   ep_dir_in = 1,
 };
 
-const uint8_t device_desc[0x12] = {
+static const uint8_t PROGMEM device_desc[0x12] = {
   0x12,        // bLength
   desc_device,
   0x00, 0x02,  // bcdUSB (2.00)
   class_cdc,
   subclass_acm,
   protocol_standard,
-  0x40,        // bMaxPacketSize (64)
+  0x20,        // bMaxPacketSize (32)
   0x66, 0x66,  // VID (0x6666)
-  0x00 ,0x88,  // PID (0x8800)
+  0x80 ,0x80,  // PID (0x8080)
   0x00, 0x01,  // bcdDevice (1.00)
   string_index_manufacturer,
   string_index_product,
@@ -107,7 +108,7 @@ const uint8_t device_desc[0x12] = {
   0x01,        // bNumConfigurations
 };
 
-const uint8_t config_desc[0x43] = {
+static const uint8_t PROGMEM config_desc[0x43] = {
   0x09,        // bLength
   desc_configuration,
   0x43, 0x00,  // wTotalLength
@@ -190,15 +191,15 @@ const uint8_t config_desc[0x43] = {
   0x00,        // bInterval (n/a)
 };
 
-const uint8_t lang_string_desc[0x04] = {
+static const uint8_t PROGMEM lang_string_desc[0x04] = {
   0x04,        // bLength
   desc_string,
   0x09, 0x04,
 };
 
-const char string_manufacturer[] = "TOYOSHIMA-HOUSE";
-const char string_product[] = "CP/MEGA32U2";
-const char string_serial[] = "0.10";
+static const char PROGMEM string_manufacturer[] = "TOYOSHIMA-HOUSE";
+static const char PROGMEM string_product[] = "CP/MEGA32U2";
+static const char PROGMEM string_serial[] = "0.10";
 
 struct device_request {
   union {
@@ -231,13 +232,15 @@ enum {
 static volatile uint8_t state = state_not_ready;
 static volatile uint32_t tick = 0;
 
-static volatile uint8_t tx_buf[256];
+static volatile uint8_t tx_buf[16];
 static volatile uint8_t tx_wr_index = 0;
 static volatile uint8_t tx_rd_index = 0;
+static const uint8_t tx_index_mask = 0x0f;
 
-static volatile uint8_t rx_buf[256];
+static volatile uint8_t rx_buf[16];
 static volatile uint8_t rx_wr_index = 0;
 static volatile uint8_t rx_rd_index = 0;
+static const uint8_t rx_index_mask = 0x0f;
 
 static uint8_t
 min_u8(uint8_t a, uint8_t b)
@@ -252,9 +255,9 @@ static int ep_init
   UECONX = _BV(EPEN);
   UECFG0X = type | dir;
 
-  const uint8_t epsize_64b = _BV(EPSIZE1) | _BV(EPSIZE0);
+  const uint8_t epsize_32b = _BV(EPSIZE1);
   const uint8_t epbank_single = 0;
-  UECFG1X = epsize_64b | epbank_single | _BV(ALLOC);
+  UECFG1X = epsize_32b | epbank_single | _BV(ALLOC);
   return (UESTA0X & _BV(CFGOK)) ? 0 : 1;
 }
 
@@ -266,6 +269,21 @@ static void ep_read
     *p++ = UEDATX;
 }
 
+static void ep_write_p
+(const void* buffer, uint8_t size)
+{
+  uint8_t* p = (uint8_t*)buffer;
+  uint8_t written = 0;
+  for (; size; --size) {
+    UEDATX = pgm_read_byte(p++);
+    if (++written == 0x20) {
+      UEINTX = ~_BV(TXINI);
+      while (!(UEINTX & _BV(TXINI)));
+      written = 0;
+    }
+  }
+}
+
 static void ep_write
 (const void* buffer, uint8_t size)
 {
@@ -273,8 +291,8 @@ static void ep_write
   uint8_t written = 0;
   for (; size; --size) {
     UEDATX = *p++;
-    if (++written == 0x40) {
-      UEINTX &= ~_BV(TXINI);
+    if (++written == 0x20) {
+      UEINTX = ~_BV(TXINI);
       while (!(UEINTX & _BV(TXINI)));
       written = 0;
     }
@@ -284,11 +302,11 @@ static void ep_write
 static void ep_write_string_desc
 (const char* string, uint8_t packet_size)
 {
-  static char buffer[64];
+  static char buffer[40];
   buffer[1] = 0x03;
   int i;
   for (i = 1; *string; ++i) {
-    buffer[i * 2 + 0] = *string++;
+    buffer[i * 2 + 0] = pgm_read_byte(string++);
     buffer[i * 2 + 1] = 0;
   }
   buffer[0] = 2 * i;
@@ -312,7 +330,7 @@ ISR
       return;
     state = state_not_ready;
     UENUM = 0;
-    UEIENX |= (_BV(RXSTPE) | _BV(RXOUTE) | _BV(TXINE));
+    UEIENX |= _BV(RXSTPE);
   }
   if (flags & _BV(SOFI)) {
     tick++;
@@ -325,20 +343,23 @@ ISR
   UENUM = 2;
   if (UEINTX & _BV(RXOUTE)) {
     while (UEBCLX) {
-      uint8_t next_index = rx_wr_index + 1;
+      uint8_t next_index = (rx_wr_index + 1) & rx_index_mask;
       if (next_index == rx_rd_index)
         break;  // buffer full, data lost
-      rx_buf[rx_wr_index++] = UEDATX;
+      rx_buf[rx_wr_index] = UEDATX;
+      rx_wr_index = next_index;
     }
-    UEINTX &= ~(_BV(RXOUTI) | _BV(FIFOCON));
+    UEINTX = ~(_BV(RXOUTI) | _BV(FIFOCON)) & 0xff;
   }
   if (tx_rd_index != tx_wr_index) {
     UENUM = 3;
     if (UEINTX & _BV(TXINI)) {
-      UEINTX &= ~_BV(TXINI);
-      while (tx_rd_index != tx_wr_index)
-        UEDATX = tx_buf[tx_rd_index++];
-      UEINTX &= ~_BV(FIFOCON);
+      UEINTX = ~_BV(TXINI);
+      while (tx_rd_index != tx_wr_index) {
+        UEDATX = tx_buf[tx_rd_index];
+        tx_rd_index = (tx_rd_index + 1) & tx_index_mask;
+      }
+      UEINTX = ~_BV(FIFOCON) & 0xff;
       UEIENX &= ~_BV(TXINE);
     }
   }
@@ -348,11 +369,11 @@ ISR
 
   struct device_request r;
   ep_read(&r, sizeof(r));
-  UEINTX &= ~(_BV(RXSTPI) | _BV(RXOUTI) | _BV(TXINI));
+  UEINTX = ~(_BV(RXSTPI) | _BV(RXOUTI) | _BV(TXINI));
   if (r.bmRequestType.b.direction == dir_device_to_host)
     while (!(UEINTX & _BV(TXINI)));
   else
-    UEINTX &= ~_BV(TXINI);
+    UEINTX = ~_BV(TXINI);
 
   if (state == state_error) {
   } else if (r.bmRequestType.b.type == type_standard &&
@@ -362,14 +383,14 @@ ISR
       UDADDR = r.wValue & 0x7f;
       while (!(UEINTX & _BV(TXINI)));
       UDADDR |= _BV(ADDEN);
-      break;
+      return;
     case req_get_descriptor:
       switch (r.wValue >> 8) {
       case desc_device:
-        ep_write(device_desc, min_u8(sizeof(device_desc), r.wLength));
+        ep_write_p(device_desc, min_u8(sizeof(device_desc), r.wLength));
         break;
       case desc_configuration:
-        ep_write(config_desc, min_u8(sizeof(config_desc), r.wLength));
+        ep_write_p(config_desc, min_u8(sizeof(config_desc), r.wLength));
         break;
       case desc_string:
         switch (r.wValue & 0xff) {
@@ -383,7 +404,7 @@ ISR
           ep_write_string_desc(string_serial, r.wLength);
           break;
         default:
-          ep_write(
+          ep_write_p(
               lang_string_desc, min_u8(sizeof(lang_string_desc), r.wLength));
           break;
         }
@@ -428,15 +449,17 @@ ISR
   if (state == state_error)
     UECONX |= (_BV(STALLRQ) | _BV(EPEN));
   else
-    UEINTX &= ~_BV(TXINI);
+    UEINTX = ~_BV(TXINI);
 }
 
 void
 con_init
 (void)
 {
-  // Disable USB first, just in case.
-  USBCON = 0;
+  // Skip initialization if the USB module is already enabled in order to keep
+  // the CDC functionality available during software resets.
+  if (USBCON & _BV(USBE))
+    return;
 
   // Setup and enable USB module.
 #if defined(MCU_32U4)
@@ -445,6 +468,8 @@ con_init
   USBCON |= _BV(USBE) | _BV(FRZCLK);
 
   // Setup clocks and PLL.
+  CLKPR = _BV(CLKPCE);
+  CLKPR = 0;
   CLKSEL0 |= _BV(EXTE);
   CLKSEL1 |= _BV(EXCKSEL3) | _BV(EXCKSEL2) | _BV(EXCKSEL1) | _BV(EXCKSEL0);
   while (!(CLKSTA & _BV(EXTON)));
@@ -475,10 +500,10 @@ void
 con_putchar
 (unsigned char c)
 {
-  uint8_t next_index = tx_wr_index + 1;
+  uint8_t next_index = (tx_wr_index + 1) & tx_index_mask;
   while (next_index == tx_rd_index);  // buffer full
   tx_buf[tx_wr_index] = c;
-  tx_wr_index++;
+  tx_wr_index = next_index;
   cli();
   UENUM = 3;
   UEIENX |= _BV(TXINE);
@@ -491,7 +516,7 @@ con_getchar
 {
   if (rx_wr_index == rx_rd_index) return -1;
   int rc = rx_buf[rx_rd_index];
-  rx_rd_index++;
+  rx_rd_index = (rx_rd_index + 1) & rx_index_mask;
   return rc;
 }
 
@@ -499,5 +524,5 @@ int
 con_peek
 (void)
 {
-  return (rx_wr_index - rx_rd_index) & 0xff;
+  return (rx_wr_index - rx_rd_index) & rx_index_mask;
 }

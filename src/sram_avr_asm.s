@@ -29,7 +29,7 @@
  * DAMAGE.
  */
 
-	.include "sram_mac.s"
+	.include "sram_avr_asm_macro.s"
 	.text
 
 .global sram_read

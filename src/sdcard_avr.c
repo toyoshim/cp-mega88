@@ -36,17 +36,30 @@
 #define PORT PORTC
 #define DDR  DDRC
 #define PIN  PINC
+
 #define P_CK _BV(PINC2)
+#define P_PU _BV(PINC4)
+#define P_DO _BV(PINC4)
+
 #if defined(MCU_88)
 # define P_DI _BV(PINC3)
+# define P_CS _BV(PINC5)
 #elif defined(MCU_32U2)
-# define P_DI _BV(PINC6)
+# define P_DI _BV(PINC5)
+# define P_CS _BV(PINC6)
 #else
 # error
 #endif
-#define P_PU _BV(PINC4)
-#define P_DO _BV(PINC4)
-#define P_CS _BV(PINC5)
+
+#if defined(MCU_88)
+# define PIN_HIGH(x) PORT |= (x)
+# define PIN_LOW(x) PORT &= ~(x)
+#elif defined(MCU_32U2)  // emulate open-drain
+# define PIN_HIGH(x) DDR &= ~(x)
+# define PIN_LOW(x) DDR |= (x)
+#else
+# error
+#endif
 
 static unsigned char
 buffer[512];
@@ -69,9 +82,10 @@ sd_out
 {
   int i;
   for (i = 7; i >= 0; i--) {
-    char out = (0 == (c & (1 << i)))? 0: P_DI;
-    PORT = (PORT & ~(P_CK | P_DI)) | out;
-    PORT |=  P_CK;
+    PIN_LOW(P_CK);
+    if (c & (1 << i)) PIN_HIGH(P_DI);
+    else PIN_LOW(P_DI);
+    PIN_HIGH(P_CK);
   }
 }
 
@@ -82,9 +96,9 @@ sd_busy
   unsigned long timeout = 0xffff;
   for (; 0 != timeout; timeout--) {
     char c;
-    PORT &= ~P_CK;
+    PIN_LOW(P_CK);
     c = PIN;
-    PORT |=  P_CK;
+    PIN_HIGH(P_CK);
     if ((f & P_DO) == (c & P_DO)) return 0;
   }
   return -1;
@@ -98,11 +112,11 @@ sd_in
   unsigned long rc = 0;
   for (i = 0; i < n; i++) {
     char c;
-    PORT &= ~P_CK;
+    PIN_LOW(P_CK);
     c = PIN;
-    PORT |= P_CK;
+    PIN_HIGH(P_CK);
     rc <<= 1;
-    if (0 != (c & P_DO)) rc |= 1;
+    if (c & P_DO) rc |= 1;
   }
   return rc;
 }
@@ -111,19 +125,22 @@ static unsigned long
 sd_cmd
 (char cmd, char arg0, char arg1, char arg2, char arg3, char crc)
 {
-  PORT = (PORT | P_DI | P_CK) & ~P_CS;
-  if (sdc_version > 1)
-    sd_out(cmd);
+  PIN_HIGH(P_DI);
+  PIN_LOW(P_CS);
+
+  sd_out(cmd);
   sd_out(arg0);
   sd_out(arg1);
   sd_out(arg2);
   sd_out(arg3);
   sd_out(crc);
-  PORT |= P_DI;
+  PIN_HIGH(P_DI);
   if (sd_busy(0) < 0) return 0xffffffff;
-  else if (0x48 == cmd) return sd_in(39);  // R7
-  else if (0x7a == cmd) return sd_in(39);  // R3
-  else return sd_in(7);  // R1
+  // The first response bit was already consumed by sd_busy.
+  // Read remaining response bites.
+  if (0x48 == cmd) return sd_in(39);  // R7
+  if (0x7a == cmd) return sd_in(39);  // R3
+  return sd_in(7);  // R1
 }
 
 void
@@ -131,16 +148,16 @@ sdcard_init
 (void)
 {
   /*
-   * PC2: CK out
-   * PC3: DI out
-   * PC4: DO in
-   * PC5: CS out
+   * CK/DI/CS: out, low
+   * DO: in
    */
   // Port Settings
-  DDR  &= ~P_DO;
-  DDR  |=  (P_CK | P_DI | P_CS);
+  DDR |=  (P_CK | P_DI | P_CS);
   PORT &= ~(P_CK | P_DI | P_CS);
-  PORT |=  P_PU;
+
+  DDR &= ~P_DO;
+  PORT |= P_PU;
+
   cur_blk = 0;
 }
 
@@ -149,11 +166,11 @@ sdcard_open
 (void)
 {
   // initial clock
-  PORT |= P_DI | P_CS;
+  PIN_HIGH(P_DI | P_CS);
   int i;
   for (i = 0; i < 80; i++) {
-    PORT &= ~P_CK;
-    PORT |=  P_CK;
+    PIN_HIGH(P_CK);
+    PIN_LOW(P_CK);
   }
   unsigned long rc;
   // cmd0 - GO_IDLE_STATE (response R1)
@@ -186,7 +203,7 @@ sdcard_open
     } while (0 == (rc & 0x80000000));  // card powerup not completed
     ccs = (rc & 0x40000000) ? 1 : 0; // ccs bit high means SDHC card
   }
-  PORT &= ~P_CK;
+  PIN_LOW(P_CK);
   return 0;
 }
 
@@ -207,7 +224,7 @@ sdcard_fetch
 
   // XXX: rc check
 
-  PORT &= ~P_CK;
+  PIN_LOW(P_CK);
 
   cur_blk = blk_addr;
   return 0;
@@ -237,7 +254,7 @@ sdcard_store
   // 0 1011: CRC error
   // 0 1101: write error
 
-  PORT &= ~P_CK;
+  PIN_LOW(P_CK);
 
   return rc; // test result code
 }

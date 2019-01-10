@@ -31,24 +31,24 @@
 
 CC	= avr-gcc
 OBJCOPY	= avr-objcopy
-HIDSPX	= hidspx
 MCU	= atmega32u2
 AFLAGS	= -Xassembler -I../src -mmcu=$(MCU) -DMCU_32U2 -DCLK_16MHZ
-CFLAGS	= -Os -Wall -mmcu=$(MCU) -mtiny-stack -DMCU_32U2
+CFLAGS	= -Os -flto -Wall -mmcu=$(MCU) -mtiny-stack -DMCU_32U2
 SFLAGS	= --mcu=$(MPU)
-HFLAGS	= -d2
 TARGET	= cpmega88
-OBJS	= platform_avr.o machine.o con_base.o con_avr_cdc.o \
-	  con_avr_uart_asm.o sram_avr.o sram_asm.o sdcard_base.o sdcard_avr.o \
-	  fat.o eeprom_base.o eeprom_avr.o io_base.o i8080.o
+OBJS	= platform_avr.o machine.o con_base.o con_avr_cdc.o sram_avr.o \
+	  sram_avr_asm.o sdcard_base.o sdcard_avr.o fat.o eeprom_base.o \
+	  eeprom_avr.o io_base.o i8080.o
 
 all: $(TARGET).hex
 
 size: $(TARGET).elf
 	$(SIZE) $(SFLAGS) $(TARGET).elf
 
-spx: all
-	$(HIDSPX) $(HFLAGS) $(TARGET).hex
+run: all
+	dfu-programmer atmega32u2 erase
+	dfu-programmer atmega32u2 flash cpmega88.hex
+	dfu-programmer atmega32u2 start || true
 
 %.hex: %.elf
 	$(OBJCOPY) -O ihex $< $@

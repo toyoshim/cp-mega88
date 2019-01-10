@@ -667,8 +667,12 @@ mem_chk
       else con_puts("mem adr: ");
 # endif // defined(CHK_MIN)
 #else // defined(MSG_MIN)
+# if defined(CHK_MIN)
+      if (0 != test) con_puts("memory test: ");
+# else // defined(CHK_MIN)
       if (0 == test) con_puts("memory write test: ");
       else con_puts("memory address test: ");
+# endif // defined(CHK_MIN)
 #endif // defined(MSG_MIN)
 #if defined(CHK_MIN)
       if (0 != test) {
@@ -681,12 +685,12 @@ mem_chk
 #endif // defined(CHK_MIN)
     }
     if (0xffff == addr) {
-      test++;
 #if defined(CHK_MIN)
       if (0 != test) con_puts("\n");
 #else // !defined(CHK_MIN)
       con_puts("\n");
 #endif // !defined(CHK_MIN)
+      test++;
     }
   }
 }
@@ -880,7 +884,9 @@ machine_boot
     if (0x88 == eeprom_read(16)) {
       char buf[8 + 1 + 3 + 1];
       eeprom_read_string(17, buf);
+#if defined(USE_FAT)
       if (0 != sd_fat) mount(buf);
+#endif
     }
     if (0x88 == eeprom_read(8)) boot();
   }
