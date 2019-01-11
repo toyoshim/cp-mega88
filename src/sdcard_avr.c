@@ -222,7 +222,7 @@ sdcard_fetch
 
   PIN_LOW(P_CK);
 
-  cur_blk = blk_addr;
+  cur_blk = blk_addr << (ccs ? 9 : 0);
   return 0;
 }
 
