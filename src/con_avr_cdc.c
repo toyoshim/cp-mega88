@@ -163,7 +163,7 @@ static const uint8_t PROGMEM config_desc[0x43] = {
   desc_endpoint,
   0x81,        // bEndpointAddress
   0x03,        // bmAttributes (interrupt)
-  0x40, 0x00,  // wMaxPacketSize (64)
+  0x20, 0x00,  // wMaxPacketSize (32)
   0x10,        // bInterval (16ms)
 
   // interface descriptor for interface 1 (data)
@@ -182,7 +182,7 @@ static const uint8_t PROGMEM config_desc[0x43] = {
   desc_endpoint,
   0x02,        // bEndpointAddress
   0x02,        // bmAttributes (bulk)
-  0x40, 0x00,  // wMaxPacketSize (64)
+  0x20, 0x00,  // wMaxPacketSize (32)
   0x00,        // bInterval (n/a)
 
   // endpoint descriptor for endpoint 3-in of interface 1 (data)
@@ -190,7 +190,7 @@ static const uint8_t PROGMEM config_desc[0x43] = {
   desc_endpoint,
   0x83,        // bEndpointAddress
   0x02,        // bmAttributes (bul)
-  0x40, 0x00,  // wMaxPacketSize (64)
+  0x20, 0x00,  // wMaxPacketSize (32)
   0x00,        // bInterval (n/a)
 };
 
@@ -262,7 +262,7 @@ static volatile uint8_t rx_rd_index = 0;
 static const uint8_t rx_index_mask = 0x03;
 
 static uint8_t
-min_u8(uint8_t a, uint8_t b)
+min_u16(uint16_t a, uint16_t b)
 {
   return (a < b) ? a : b;
 }
@@ -337,6 +337,9 @@ ISR
       if (next_index == rx_rd_index)
         break;  // buffer full, data lost
       rx_buf[rx_wr_index] = UEDATX;
+      if (state != state_ready)
+        state = state_ready;  // dispose the first byte
+      else
       rx_wr_index = next_index;
     }
     UEINTX = ~(_BV(RXOUTI) | _BV(FIFOCON)) & 0xff;
@@ -377,28 +380,28 @@ ISR
     case req_get_descriptor:
       switch (r.wValue >> 8) {
       case desc_device:
-        ep_write(device_desc, min_u8(sizeof(device_desc), r.wLength));
+        ep_write(device_desc, min_u16(sizeof(device_desc), r.wLength));
         break;
       case desc_configuration:
-        ep_write(config_desc, min_u8(sizeof(config_desc), r.wLength));
+        ep_write(config_desc, min_u16(sizeof(config_desc), r.wLength));
         break;
       case desc_string:
         switch (r.wValue & 0xff) {
         case string_index_manufacturer:
           ep_write(manufacturer_string_desc,
-              min_u8(sizeof(manufacturer_string_desc), r.wLength));
+              min_u16(sizeof(manufacturer_string_desc), r.wLength));
           break;
         case string_index_product:
           ep_write(product_string_desc,
-              min_u8(sizeof(product_string_desc), r.wLength));
+              min_u16(sizeof(product_string_desc), r.wLength));
           break;
         case string_index_serial:
           ep_write(serial_string_desc,
-              min_u8(sizeof(serial_string_desc), r.wLength));
+              min_u16(sizeof(serial_string_desc), r.wLength));
           break;
         default:
           ep_write(lang_string_desc,
-              min_u8(sizeof(lang_string_desc), r.wLength));
+              min_u16(sizeof(lang_string_desc), r.wLength));
           break;
         }
         break;
@@ -430,7 +433,6 @@ ISR
       }
       break;
     case req_cdc_set_control_line_state:
-      state = state_ready;
       break;
     default:
       state = state_error;
