@@ -405,7 +405,6 @@ prompt
 # if !defined(MSG_MIN)
     con_putsln("<sdcard dump block buffer>");
 # endif // !defined(MSG_MIN)
-    con_puts(" ");
     int i;
     for (i = 0; i < 512; i++) {
       char buf[17];

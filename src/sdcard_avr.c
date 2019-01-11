@@ -65,16 +65,13 @@ static unsigned char
 buffer[512];
 
 static unsigned short
-crc = 0xffff;
+crc;
 
 static unsigned long
-cur_blk = 0;
+cur_blk;
 
 static unsigned char
-ccs = 0;
-
-static unsigned char
-sdc_version = 2;
+ccs;
 
 static void
 sd_out
@@ -178,18 +175,17 @@ sdcard_open
   if (1 != rc) return -1;
 
   // cmd8 - SEND_IF_COND (response R7)
-  sdc_version = 2;
   rc = sd_cmd(0x48, 0x00, 0x00, 0x01, 0x0aa, 0x87);
   if ((rc & 0x00000fff) != 0x1aa) {
     // SDC v2 initialization failed, try legacy command.
     // cmd1 - SEND_OP_COND (response R1)
-    sdc_version = 1;
     for (;;) {
       rc = sd_cmd(0x41, 0x00, 0x00, 0x00, 0x00, 0x00);
       if (0 == rc) break;
       if (0xffffffff == rc) return -2;
     }
     if (0 != rc) return -3;
+    ccs = 0;
   } else {
     do {
       // cmd55 - APP_CMD (response R1)

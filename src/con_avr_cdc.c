@@ -248,15 +248,15 @@ enum {
 static volatile uint8_t state = state_not_ready;
 static volatile uint32_t tick = 0;
 
-static volatile uint8_t tx_buf[16];
+static volatile uint8_t tx_buf[4];
 static volatile uint8_t tx_wr_index = 0;
 static volatile uint8_t tx_rd_index = 0;
-static const uint8_t tx_index_mask = 0x0f;
+static const uint8_t tx_index_mask = 0x03;
 
-static volatile uint8_t rx_buf[16];
+static volatile uint8_t rx_buf[4];
 static volatile uint8_t rx_wr_index = 0;
 static volatile uint8_t rx_rd_index = 0;
-static const uint8_t rx_index_mask = 0x0f;
+static const uint8_t rx_index_mask = 0x03;
 
 static uint8_t
 min_u8(uint8_t a, uint8_t b)
