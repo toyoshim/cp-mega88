@@ -39,6 +39,7 @@
 //#  define CLR_MEM
 #  define CHK_MEM
 //#  define CHK_MIN
+#  define CHK_SDC
 #  define MONITOR
 #  define  MON_MEM
 #  define  MON_SDC
@@ -53,6 +54,7 @@
 //#  define CLR_MEM
 #  define CHK_MEM
 #  define CHK_MIN
+//#  define CHK_SDC
 #  define MONITOR
 //#  define  MON_MEM
 #  define  MON_SDC

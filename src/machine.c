@@ -607,7 +607,7 @@ mem_clr
 }
 #endif // defined(CLR_MEM)
 
-#if defined(MON_MEM) | defined(CHK_MEM)
+#if defined(MON_MEM) || defined(CHK_MEM)
 void
 mem_chk
 (void)
@@ -621,79 +621,154 @@ mem_chk
       sram_write(addr, 0xaa);
       c = sram_read(addr);
       if (0xaa != c) err |= 1;
-#if !defined(CHK_MIN)
+# if !defined(CHK_MIN)
       sram_write(addr, 0x55);
       c = sram_read(addr);
       if (0x55 != c) err |= 2;
-#endif // !defined(CHK_MIN)
+# endif // !defined(CHK_MIN)
       if (0 == (addr & 1)) sram_write(addr, addr);
       else sram_write(addr, addr >> 8);
-#if !defined(CHK_MIN)
+# if !defined(CHK_MIN)
       c = sram_read(addr);
       if ((0 == (addr & 1)) & ((addr & 0xff) != c)) err |= 4;
       if ((0 != (addr & 1)) & ((addr >> 8) != c)) err |= 4;
-#endif // !defined(CHK_MIN)
+# endif // !defined(CHK_MIN)
     } else {
       c = sram_read(addr);
       if ((0 == (addr & 1)) & ((addr & 0xff) != c)) err |= 4;
       if ((0 != (addr & 1)) & ((addr >> 8) != c)) err |= 4;
     }
     if (0 != err) {
-#if defined(CHK_MIN)
+# if defined(CHK_MIN)
       con_puts("ERR: ");
-#else // defined(CHK_MIN)
+# else // defined(CHK_MIN)
       if (0 == test) con_puts("write failed at 0x");
       else con_puts("address failed at 0x");
-#endif // defined(CHK_MIN)
+# endif // defined(CHK_MIN)
       con_puthex(addr >> 8);
       con_puthex(addr);
-#if defined(CHK_MIN)
+# if defined(CHK_MIN)
       con_putsln("");
-#else // defined(CHK_MIN)
+# else // defined(CHK_MIN)
       con_puts(" (");
       if (0 == test) con_puthex(err);
       else con_puthex(c);
       con_putsln(")");
-#endif // defined(CHK_MIN)
+# endif // defined(CHK_MIN)
       return;
     }
     if (0xfff == (addr & 0xfff)) {
-#if defined(MSG_MIN)
-# if defined(CHK_MIN)
+# if defined(MSG_MIN)
+#  if defined(CHK_MIN)
       if (0 != test) con_puts("MEM: ");
-# else // defined(CHK_MIN)
+#  else // defined(CHK_MIN)
       if (0 == test) con_puts("mem wrt: ");
       else con_puts("mem adr: ");
-# endif // defined(CHK_MIN)
-#else // defined(MSG_MIN)
-# if defined(CHK_MIN)
+#  endif // defined(CHK_MIN)
+# else // defined(MSG_MIN)
+#  if defined(CHK_MIN)
       if (0 != test) con_puts("memory test: ");
-# else // defined(CHK_MIN)
+#  else // defined(CHK_MIN)
       if (0 == test) con_puts("memory write test: ");
       else con_puts("memory address test: ");
-# endif // defined(CHK_MIN)
-#endif // defined(MSG_MIN)
-#if defined(CHK_MIN)
+#  endif // defined(CHK_MIN)
+# endif // defined(MSG_MIN)
+# if defined(CHK_MIN)
       if (0 != test) {
         con_putnum_u16(addr, 5);
         con_puts("/65535\r");
       }
-#else // defined(CHK_MIN)
+# else // defined(CHK_MIN)
       con_putnum_u16(addr, 5);
       con_puts("/65535\r");
-#endif // defined(CHK_MIN)
+# endif // defined(CHK_MIN)
     }
     if (0xffff == addr) {
-#if defined(CHK_MIN)
+# if defined(CHK_MIN)
       if (0 != test) con_puts("\n");
-#else // !defined(CHK_MIN)
+# else // !defined(CHK_MIN)
       con_puts("\n");
-#endif // !defined(CHK_MIN)
+# endif // !defined(CHK_MIN)
       test++;
     }
   }
+# if !defined(CHK_MIN)
+  short seed = 0;
+  addr = 0;
+  int err = 0;
+  while (seed < 0x200) {
+    unsigned char c = ((addr >> 8) ^ (addr & 0xff)) + (seed >> 1);
+    if (seed & 1) {
+      if (c != sram_read(addr)) err++;
+    } else{
+      sram_write(addr, c);
+      if (c != sram_read(addr)) err++;
+    }
+    if (++addr == 0x0000) {
+      con_puts("memory full test: ");
+      con_putnum_u16(seed >> 1, 3);
+      con_puts("/256");
+      if (err) {
+        con_puts(" w/ error(s) ");
+        con_putnum_u16(err, 5);
+      }
+      con_puts("\r");
+      seed++;
+    }
+  }
+  con_putsln("");
+# endif // !defined(CHK_MIN)
 }
-#endif // defined(MON_MEM) | defined(CHK_MEM)
+#endif // defined(MON_MEM) || defined(CHK_MEM)
+
+#if defined(CHK_SDC)
+void
+sdc_chk
+(void)
+{
+  int block;
+  for (block = 0; block < 128; ++block) {
+    unsigned short addr = block << 9;
+    sdcard_fetch(block);
+    int i;
+    for (i = 0; i < 512; i++) sram_write(addr + i, sdcard_read(i));
+    con_puts("sdc test phase 1: ");
+    con_putnum_u16(block, 3);
+    con_puts("/127\r");
+  }
+  con_putsln("");
+  int err = 0;
+  for (block = 0; block < 128; ++block) {
+    unsigned short addr = block << 9;
+    sdcard_fetch(block);
+    unsigned short i;
+    for (i = 0; i < 512; i++) {
+      if (sram_read(addr + i) != sdcard_read(i)) {
+        err++;
+        con_puts("\r\n@");
+        con_puthex((addr + i) >> 8);
+        con_puthex((addr + i) & 0xff);
+        con_puts("\r\nexpect: ");
+        con_puthex(sram_read(addr + i));
+        con_puts("\r\nactual: ");
+        con_puthex(sdcard_read(i));
+        con_putsln("");
+        sram_write(addr + i, sdcard_read(i));
+        block--;
+      }
+    }
+    con_puts("sdc test phase 2: ");
+    con_putnum_u16(block, 3);
+    con_puts("/127");
+    if (err) {
+      con_puts(" w/ error(s) ");
+      con_putnum_u16(err, 5);
+    }
+    con_puts("\r");
+  }
+  con_putsln("");
+}
+#endif // defined(CHK_SDC)
 
 void
 out
@@ -841,7 +916,12 @@ machine_boot
   mem_chk();
 #endif // defined(MON_MEM) || defined(CHK_MEM)
   char rc = sdcard_open();
-  if (rc >= 0) con_putsln("SDC: ok");
+  if (rc >= 0) {
+    con_putsln("SDC: ok");
+#if defined(CHK_SDC)
+    sdc_chk();
+#endif // defined(CHK_SDC)
+  }
 #if !defined(MSG_MIN)
   else {
     con_puts("SDC: err(");
