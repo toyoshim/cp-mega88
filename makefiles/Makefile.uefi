@@ -47,7 +47,7 @@ EFIROOT	= fat
 EFIBIOS = ../third_party/OVMF.fd
 OBJS	= platform_uefi.o machine.o con_base.o con_uefi.o sram_base.o \
 	  sdcard_base.o sdcard_uefi.o fat.o eeprom_base.o eeprom_image.o \
-	  eeprom_uefi.o io_base.o cpu_8080.o
+	  eeprom_uefi.o io_base.o led_base.o cpu_8080.o
 
 all: $(TARGET).efi
 

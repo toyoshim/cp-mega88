@@ -30,9 +30,12 @@
  */
 
 #include "con.h"
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+
+#include "led.h"
 
 #if !defined(MCU_32U2) && !defined(MCU_32U4)
 # error not supported mcu
@@ -451,6 +454,8 @@ con_init
   if (USBCON & _BV(USBE))
     return;
 
+  led_on();
+
   // Setup and enable USB module.
 #if defined(MCU_32U4)
   UHWCON |= _BV(UVREGE);
@@ -483,7 +488,9 @@ con_init
   UDIEN = _BV(EORSTE) | _BV(SOFE);
   sei();
 
+  led_blink();
   while (state != state_ready);
+  led_off();
 }
 
 void

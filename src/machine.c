@@ -41,6 +41,7 @@
 #include "eeprom.h"
 #include "fat.h"
 #include "io.h"
+#include "led.h"
 #include "platform.h"
 #include "sdcard.h"
 #include "sram.h"
@@ -853,6 +854,7 @@ out
     sect = val;
     break;
   case 13: {
+    led_on();
     unsigned long pos = ((unsigned long)track * 26 + sect - 1) * 128;
     unsigned long blk = pos & 0xfffffe00;
     unsigned short off = pos & 0x1ff;
@@ -865,6 +867,7 @@ out
       for (i = 0; i < 128; i++) sdcard_write(off + i, sram_read(addr + i));
       sdcard_flush();
     }
+    led_off();
     break; }
   case 15:
     dma_lo = val;
@@ -901,6 +904,7 @@ int
 machine_boot
 (void)
 {
+  led_init();
   con_init();
   sram_init();
   sdcard_init();

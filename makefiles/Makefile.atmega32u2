@@ -38,7 +38,7 @@ SFLAGS	= --mcu=$(MPU)
 TARGET	= cpmega88
 OBJS	= platform_avr.o machine.o con_base.o con_avr_cdc.o sram_avr.o \
 	  sram_avr_asm.o sdcard_base.o sdcard_avr.o fat.o eeprom_base.o \
-	  eeprom_avr.o io_base.o i8080.o
+	  eeprom_avr.o io_base.o led_avr.o i8080.o
 
 all: $(TARGET).hex
 
