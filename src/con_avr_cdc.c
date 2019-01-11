@@ -197,9 +197,25 @@ static const uint8_t PROGMEM lang_string_desc[0x04] = {
   0x09, 0x04,
 };
 
-static const char PROGMEM string_manufacturer[] = "TOYOSHIMA-HOUSE";
-static const char PROGMEM string_product[] = "CP/MEGA32U2";
-static const char PROGMEM string_serial[] = "0.10";
+static const uint8_t PROGMEM manufacturer_string_desc[0x20] = {
+  0x20,        // bLength
+  desc_string,
+  'T', 0, 'O', 0, 'Y', 0, 'O', 0, 'S', 0, 'H', 0, 'I', 0, 'M', 0, 'A',0, '-', 0,
+  'H', 0, 'O', 0, 'U', 0, 'S', 0, 'E', 0,
+};
+
+static const uint8_t PROGMEM product_string_desc[0x18] = {
+  0x18,        // bLength
+  desc_string,
+  'C', 0, 'P', 0, '/', 0, 'M', 0, 'E', 0, 'G', 0, 'A', 0, '3', 0, '2',0, 'U', 0,
+  '2', 0,
+};
+
+static const uint8_t PROGMEM serial_string_desc[0x0a] = {
+  0x0a,        // bLength
+  desc_string,
+  '0', 0, '.', 0, '2', 0, '0', 0,
+};
 
 struct device_request {
   union {
@@ -269,7 +285,7 @@ static void ep_read
     *p++ = UEDATX;
 }
 
-static void ep_write_p
+static void ep_write
 (const void* buffer, uint8_t size)
 {
   uint8_t* p = (uint8_t*)buffer;
@@ -282,35 +298,6 @@ static void ep_write_p
       written = 0;
     }
   }
-}
-
-static void ep_write
-(const void* buffer, uint8_t size)
-{
-  uint8_t* p = (uint8_t*)buffer;
-  uint8_t written = 0;
-  for (; size; --size) {
-    UEDATX = *p++;
-    if (++written == 0x20) {
-      UEINTX = ~_BV(TXINI);
-      while (!(UEINTX & _BV(TXINI)));
-      written = 0;
-    }
-  }
-}
-
-static void ep_write_string_desc
-(const char* string, uint8_t packet_size)
-{
-  static char buffer[40];
-  buffer[1] = 0x03;
-  int i;
-  for (i = 1; *string; ++i) {
-    buffer[i * 2 + 0] = pgm_read_byte(string++);
-    buffer[i * 2 + 1] = 0;
-  }
-  buffer[0] = 2 * i;
-  ep_write(buffer, min_u8(buffer[0], packet_size));
 }
 
 ISR
@@ -387,25 +374,28 @@ ISR
     case req_get_descriptor:
       switch (r.wValue >> 8) {
       case desc_device:
-        ep_write_p(device_desc, min_u8(sizeof(device_desc), r.wLength));
+        ep_write(device_desc, min_u8(sizeof(device_desc), r.wLength));
         break;
       case desc_configuration:
-        ep_write_p(config_desc, min_u8(sizeof(config_desc), r.wLength));
+        ep_write(config_desc, min_u8(sizeof(config_desc), r.wLength));
         break;
       case desc_string:
         switch (r.wValue & 0xff) {
         case string_index_manufacturer:
-          ep_write_string_desc(string_manufacturer, r.wLength);
+          ep_write(manufacturer_string_desc,
+              min_u8(sizeof(manufacturer_string_desc), r.wLength));
           break;
         case string_index_product:
-          ep_write_string_desc(string_product, r.wLength);
+          ep_write(product_string_desc,
+              min_u8(sizeof(product_string_desc), r.wLength));
           break;
         case string_index_serial:
-          ep_write_string_desc(string_serial, r.wLength);
+          ep_write(serial_string_desc,
+              min_u8(sizeof(serial_string_desc), r.wLength));
           break;
         default:
-          ep_write_p(
-              lang_string_desc, min_u8(sizeof(lang_string_desc), r.wLength));
+          ep_write(lang_string_desc,
+              min_u8(sizeof(lang_string_desc), r.wLength));
           break;
         }
         break;
