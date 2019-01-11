@@ -84,6 +84,7 @@ sd_out
     else PIN_LOW(P_DI);
     PIN_HIGH(P_CK);
   }
+  PIN_LOW(P_CK);
 }
 
 static int
@@ -93,9 +94,9 @@ sd_busy
   unsigned long timeout = 0xffff;
   for (; 0 != timeout; timeout--) {
     char c;
-    PIN_LOW(P_CK);
-    c = PIN;
     PIN_HIGH(P_CK);
+    c = PIN;
+    PIN_LOW(P_CK);
     if ((f & P_DO) == (c & P_DO)) return 0;
   }
   return -1;
@@ -109,9 +110,9 @@ sd_in
   unsigned long rc = 0;
   for (i = 0; i < n; i++) {
     char c;
-    PIN_LOW(P_CK);
-    c = PIN;
     PIN_HIGH(P_CK);
+    c = PIN;
+    PIN_LOW(P_CK);
     rc <<= 1;
     if (c & P_DO) rc |= 1;
   }
