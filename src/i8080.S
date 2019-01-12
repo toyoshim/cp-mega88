@@ -29,8 +29,7 @@
  * DAMAGE.
  */
 
-	.include "sram_avr_asm_macro.s"
-//	.include "sram_test.s"
+#include "sram_avr_asm.mac"
 
 #if defined(MCU_88)
 # define call rcall

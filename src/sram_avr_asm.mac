@@ -29,21 +29,26 @@
  * DAMAGE.
  */
 
+#include "config.h"
+
 .equ	DOUT,11
 .equ	DDIR,10
 .equ	DIN,9
 .equ	CTRL,5
 
-.equ	W_X,0
-.equ	SEL,1
-.equ	A16,2
-.equ	C_L,4
-.equ	C_H,5
+.equ	W_X,(1 << 0)
+.equ	SEL,(1 << 1)
+.equ	A16,(1 << 2)
+#if defined(IOEXT)
+.equ	IO,((1 << 3) | (1 << 6))
+#else // defined(IOEXT)
+.equ	IO,0
+#endif // defined(IOEXT)
+.equ	C1,(IO|(1 << 4))
+.equ	C2,(IO|(1 << 5))
 
-.equ	C1,(1 << C_L)
-.equ	C2,(1 << C_H)
-.equ	RD,((1 << W_X) | (1 << SEL))
-.equ	WR,(1 << SEL)
+.equ	RD,(IO|SEL|W_X)
+.equ	WR,(IO|SEL)
 
 .equ	DATA_IN,0
 .equ	DATA_OUT,0xff
@@ -59,9 +64,10 @@
 	ldi \work, RD
 	out CTRL, \work	/* assert /W and E2     */
 	out DOUT, r1	/* disable pull-ups     */
-	ldi \work, DATA_OUT
-	out CTRL, r1	/* negate signals       */
+	ldi \work, IO
+	out CTRL, \work	/* negate signals       */
 	in \ret, DIN	/* read data            */
+	ldi \work, DATA_OUT
 	out DDIR, \work	/* data port as output  */
 .endm
 
@@ -75,5 +81,6 @@
 	out DOUT, \data	/* output data          */
 	ldi \work, WR
 	out CTRL, \work	/* assert E2            */
-	out CTRL, r1	/* negate signals       */
+	ldi \work, IO
+	out CTRL, \work	/* negate signals       */
 .endm

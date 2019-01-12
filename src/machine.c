@@ -907,6 +907,7 @@ machine_boot
   led_init();
   con_init();
   sram_init();
+  io_init();
   sdcard_init();
 #if defined(MSG_MIN)
   con_putsln("\r\nCP/Mega88");

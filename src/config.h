@@ -35,10 +35,10 @@
 # if defined(TEST)
 #  define CPU_EMU_C
 #  define USE_FAT
-//#  define MSG_MIN
-//#  define CLR_MEM
+/* #  define MSG_MIN */
+/* #  define CLR_MEM */
 #  define CHK_MEM
-//#  define CHK_MIN
+/* #  define CHK_MIN */
 #  define CHK_SDC
 #  define MONITOR
 #  define  MON_MEM
@@ -48,19 +48,20 @@
 #  define  MON_HELP
 # else // defined(TEST)
 #  define CPU_EMU_A
-//#  define CPM_DEBUG
-//#  define USE_FAT
+/* #  define CPM_DEBUG */
+/* #  define USE_FAT */
 #  define MSG_MIN
-//#  define CLR_MEM
+/* #  define CLR_MEM */
 #  define CHK_MEM
 #  define CHK_MIN
-//#  define CHK_SDC
+/* #  define CHK_SDC */
 #  define MONITOR
-//#  define  MON_MEM
+/* #  define  MON_MEM */
 #  define  MON_SDC
-//#  define  MON_FAT
+/* #  define  MON_FAT */
 #  define  MON_CON
 #  define  MON_HELP
+#  define IOEXT
 # endif // defined(TEST)
 
 # define MAX_PROMPT 16

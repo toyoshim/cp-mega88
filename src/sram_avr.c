@@ -37,19 +37,14 @@ void
 sram_init
 (void)
 {
-  /*
-   * PB0: /W
-   * PB1: E2
-   * PB2: A16
-   * PB3: N/A (input)
-   * PB4: CLK for FF on Address Low
-   * PB5: CLK for FF on Address High
-   * PD*: Address / Data
-   */
-  // Port Settings
-  //   All ports are Output excepr for PB3
-  DDRB    =  (_BV(DDB0) | _BV(DDB1) | _BV(DDB2) | _BV(DDB4) | _BV(DDB5));
-  PORTB   = 0;
-  DDRD    = 0xff;
-  PORTD   = 0;
+  // PB0: /W - output
+  // PB1: E2 - output
+  // PB2: A16 - output
+  // PB4: CLK for FF on Address Low - output
+  // PB5: CLK for FF on Address High - output
+  // PD*: Address / Data - in/out
+  DDRB  |=  (_BV(DDB0) | _BV(DDB1) | _BV(DDB2) | _BV(DDB4) | _BV(DDB5));
+  PORTB &=  ~(_BV(DDB0) | _BV(DDB1) | _BV(DDB2) | _BV(DDB4) | _BV(DDB5));
+  DDRD  = 0xff;
+  PORTD = 0;
 }
