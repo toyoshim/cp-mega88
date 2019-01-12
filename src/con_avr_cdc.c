@@ -57,11 +57,13 @@ enum {
   recp_interface = 1,
   recp_endpoint = 2,
 
+  req_clear_feature = 1,
   req_set_address = 5,
   req_get_descriptor = 6,
   req_set_configuration = 9,
 
   req_cdc_set_line_coding = 32,
+  req_cdc_get_line_coding = 33,
   req_cdc_set_control_line_state = 34,
 
   desc_device = 1,
@@ -129,7 +131,7 @@ static const uint8_t PROGMEM config_desc[0x43] = {
   0x01,        // bNumEndpoints
   class_cdc,
   subclass_acm,
-  protocol_standard,
+  0x01,        // bInterfaceProtocol (Common AT commands)
   0x00,        // iInterface
 
   // CDC specific - header functional descriptor
@@ -149,7 +151,7 @@ static const uint8_t PROGMEM config_desc[0x43] = {
   0x04,        // bLength
   desc_cs_interface,
   desc_cs_sub_acm,
-  0x00,        // bmCapabilities
+  0x02,        // bmCapabilities
 
   // CDC specific - union
   0x05,        // bLength
@@ -286,15 +288,16 @@ static void ep_read
   uint8_t* p = (uint8_t*)buffer;
   for (; size; --size)
     *p++ = UEDATX;
+  UEINTX = ~_BV(RXOUTI);
 }
 
 static void ep_write
-(const void* buffer, uint8_t size)
+(const void* buffer, uint8_t size, uint8_t is_pgm)
 {
   uint8_t* p = (uint8_t*)buffer;
   uint8_t written = 0;
   for (; size; --size) {
-    UEDATX = pgm_read_byte(p++);
+    UEDATX = is_pgm ? pgm_read_byte(p++) : *p++;
     if (++written == 0x20) {
       UEINTX = ~_BV(TXINI);
       while (!(UEINTX & _BV(TXINI)));
@@ -310,17 +313,17 @@ ISR
   UDINT = 0;
   if (flags & _BV(EORSTI)) {
     state = state_error;
-    if (ep_init(0, ep_type_control, ep_dir_out) +
-        ep_init(1, ep_type_interrupt, ep_dir_in) +
-        ep_init(2, ep_type_bulk, ep_dir_out)) {
+    if (ep_init(0, ep_type_control, ep_dir_out))
       return;
-    }
+    UEIENX |= _BV(RXSTPE);
+    if (ep_init(1, ep_type_interrupt, ep_dir_in))
+      return;
+    if (ep_init(2, ep_type_bulk, ep_dir_out))
+      return;
     UEIENX |= _BV(RXOUTE);
     if (ep_init(3, ep_type_bulk, ep_dir_in))
       return;
     state = state_not_ready;
-    UENUM = 0;
-    UEIENX |= _BV(RXSTPE);
   }
   if (flags & _BV(SOFI)) {
     tick++;
@@ -362,46 +365,50 @@ ISR
 
   struct device_request r;
   ep_read(&r, sizeof(r));
-  UEINTX = ~(_BV(RXSTPI) | _BV(RXOUTI) | _BV(TXINI));
+  UEINTX = ~(_BV(RXSTPI) | _BV(TXINI));
   if (r.bmRequestType.b.direction == dir_device_to_host)
     while (!(UEINTX & _BV(TXINI)));
-  else
-    UEINTX = ~_BV(TXINI);
 
   if (state == state_error) {
   } else if (r.bmRequestType.b.type == type_standard &&
       r.bmRequestType.b.receptor == recp_device) {
     switch (r.bRequest) {
+    case req_clear_feature:
+      break;
     case req_set_address:
       UDADDR = r.wValue & 0x7f;
+      // Exceptional timing care for setting address only on right conditions.
+      // Other host to device messages reset the TXINI at the end of this
+      // function after the 'break' of this 'switch'.
+      UEINTX = ~_BV(TXINI);
       while (!(UEINTX & _BV(TXINI)));
       UDADDR |= _BV(ADDEN);
       return;
     case req_get_descriptor:
       switch (r.wValue >> 8) {
       case desc_device:
-        ep_write(device_desc, min_u16(sizeof(device_desc), r.wLength));
+        ep_write(device_desc, min_u16(sizeof(device_desc), r.wLength), 1);
         break;
       case desc_configuration:
-        ep_write(config_desc, min_u16(sizeof(config_desc), r.wLength));
+        ep_write(config_desc, min_u16(sizeof(config_desc), r.wLength), 1);
         break;
       case desc_string:
         switch (r.wValue & 0xff) {
         case string_index_manufacturer:
           ep_write(manufacturer_string_desc,
-              min_u16(sizeof(manufacturer_string_desc), r.wLength));
+              min_u16(sizeof(manufacturer_string_desc), r.wLength), 1);
           break;
         case string_index_product:
           ep_write(product_string_desc,
-              min_u16(sizeof(product_string_desc), r.wLength));
+              min_u16(sizeof(product_string_desc), r.wLength), 1);
           break;
         case string_index_serial:
           ep_write(serial_string_desc,
-              min_u16(sizeof(serial_string_desc), r.wLength));
+              min_u16(sizeof(serial_string_desc), r.wLength), 1);
           break;
         default:
           ep_write(lang_string_desc,
-              min_u16(sizeof(lang_string_desc), r.wLength));
+              min_u16(sizeof(lang_string_desc), r.wLength), 1);
           break;
         }
         break;
@@ -422,17 +429,22 @@ ISR
     }
   } else if (r.bmRequestType.b.type == type_class &&
       r.bmRequestType.b.receptor == recp_interface) {
+    static struct line_coding lc;
     switch (r.bRequest) {
     case req_cdc_set_line_coding:
       while (!(UEINTX & _BV(RXOUTI)));
       if (r.wLength == sizeof(struct line_coding)) {
-        struct line_coding lc;
         ep_read(&lc, sizeof(lc));
       } else {
         state = state_error;
       }
       break;
+    case req_cdc_get_line_coding:
+      ep_write(&lc, min_u16(sizeof(lc), r.wLength), 0);
+      break;
     case req_cdc_set_control_line_state:
+      if (r.wValue & 1)  // DTE is present
+        state = state_ready;
       break;
     default:
       state = state_error;
@@ -441,10 +453,12 @@ ISR
   } else {
     state = state_error;
   }
-  if (state == state_error)
+  if (state == state_error) {
+    led_on();
     UECONX |= (_BV(STALLRQ) | _BV(EPEN));
-  else
+  } else {
     UEINTX = ~_BV(TXINI);
+  }
 }
 
 void
