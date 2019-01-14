@@ -853,22 +853,44 @@ out
   case 12:
     sect = val;
     break;
-  case 13: {
-    led_on();
-    unsigned long pos = ((unsigned long)track * 26 + sect - 1) * 128;
-    unsigned long blk = pos & 0xfffffe00;
-    unsigned short off = pos & 0x1ff;
-    disk_read(blk);
-    unsigned short i;
-    unsigned short addr = (dma_hi << 8) | dma_lo;
-    if (0 == val) {
-      for (i = 0; i < 128; i++) sram_write(addr + i, sdcard_read(off + i));
-    } else if (0 == wr_prt) {
-      for (i = 0; i < 128; i++) sdcard_write(off + i, sram_read(addr + i));
-      sdcard_flush();
+  case 13:
+    if (drive == 0 || drive == 8) {
+      // Drive A: 77 tracks x 26 sectors x 128 bytes
+      // Drive I: 255 tracks x 128 sectors b 128 bytes
+      // Use the first 77x26x128 bytes of the image for the drive A, and use
+      // remaining parts for the drive I.
+      led_on();
+      unsigned long sectors = drive ? 128 : 26;
+      unsigned long pos = ((unsigned long)track * sectors + sect - 1) * 128;
+      if (drive)
+        pos += 256256;
+      unsigned long blk = pos & 0xfffffe00;
+      unsigned short off = pos & 0x1ff;
+      disk_read(blk);
+      unsigned short i;
+      unsigned short addr = (dma_hi << 8) | dma_lo;
+      if (0 == val) {
+        for (i = 0; i < 128; i++) sram_write(addr + i, sdcard_read(off + i));
+        disk_err = 0;
+      } else if (1 == val && 0 == wr_prt) {
+        for (i = 0; i < 128; i++) sdcard_write(off + i, sram_read(addr + i));
+        disk_err = sdcard_flush();
+        if (disk_err) {
+          con_puts("\r\n\r\nI/O ERROR (");
+          con_puthex(disk_err);
+          con_putsln(")\r\n\r\n");
+          disk_err = 6;
+        }
+      } else {
+        disk_err = 7;
+      }
+      led_off();
+    } else {
+      disk_err = 1;
     }
-    led_off();
-    break; }
+    break;
+  case 14:
+    break;
   case 15:
     dma_lo = val;
     break;
