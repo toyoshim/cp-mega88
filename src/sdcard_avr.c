@@ -231,7 +231,7 @@ int
 sdcard_store
 (unsigned long blk_addr)
 {
-  if (0 == ccs) blk_addr >>= 9; // SDHC cards use block addresses
+  if (0 != ccs) blk_addr >>= 9; // SDHC cards use block addresses
   // cmd24
   unsigned long rc =
     sd_cmd(0x58, blk_addr >> 24, blk_addr >> 16, blk_addr >> 8, blk_addr, 0x00);
