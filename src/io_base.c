@@ -79,11 +79,13 @@ io_out
 (unsigned char port, unsigned char val)
 {
   // Following ports are handled in machine.c.
+  //  0: console status
   //  1: console data
   // 10: FDC drive
   // 11: FDC track
   // 12: FDC sector (low)
   // 13: FDC command
+  // 14: FDC status
   // 15: DMA destination address low
   // 16: DMA destination address high
 }
@@ -94,6 +96,12 @@ io_in(unsigned char port)
   // Following ports are handled in machine.c.
   //  0: console status
   //  1: console data
+  // 10: FDC drive
+  // 11: FDC track
+  // 12: FDC sector (low)
+  // 13: FDC command
   // 14: FDC status
-  return 0;
+  // 15: DMA destination address low
+  // 16: DMA destination address high
+  return 0xff;
 }

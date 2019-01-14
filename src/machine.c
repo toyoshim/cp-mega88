@@ -105,7 +105,7 @@ boot
   for (i = 0; i < 0x100; i++) sram_write(i, 0);
   sram_write(0x0000, 0xc3);
   sram_write(0x0001, 0x00);
-  sram_write(0x0002, 0xFA);	// jump bios (cold boot)
+  sram_write(0x0002, 0xFA);  // jump bios (cold boot)
   sram_write(0x0005, 0xc3);
   sram_write(0x0006, 0x06);
   sram_write(0x0007, 0x3c + 0xb0);
@@ -771,21 +771,25 @@ sdc_chk
 }
 #endif // defined(CHK_SDC)
 
+static unsigned char drive = 0;
+static unsigned char track = 0;
+static unsigned char sect = 0;
+static unsigned char disk_err = 0;
+static unsigned char dma_lo = 0;
+static unsigned char dma_hi = 0;
+
 void
 out
 (unsigned char port, unsigned char val)
 {
-  static unsigned char drive __attribute__ ((unused)) = 0;
-  static unsigned char track = 0;
-  static unsigned char sect = 0;
-  static unsigned char dma_lo = 0;
-  static unsigned char dma_hi = 0;
   static unsigned char esc = 0;
 #if defined(EFI)
   static INT64 row;
 #endif // defined(EFI)
 
   switch(port) {
+  case 0:
+    break;
   case 1:
     switch (esc) {
     case 1:
@@ -907,19 +911,34 @@ unsigned char
 in
 (unsigned char port)
 {
-  if (0 == port) {
+  switch (port) {
+  case 0:
     if (0 != con_peek()) return 0xff;
-    return 0;
-  } else if (1 == port) {
+    break;
+  case 1: {
     int c;
     do {
       c = con_getchar();
     } while (-1 == c);
-    return c;
-  } else if (14 == port) {
-    return 0;
+    return c; }
+  case 10:
+    return drive;
+  case 11:
+    return track;
+  case 12:
+    return sect;
+  case 13:
+    break;
+  case 14:
+    return disk_err;
+  case 15:
+    return dma_lo;
+  case 16:
+    return dma_hi;
+  default:
+    return io_in(port);
   }
-  return io_in(port);
+  return 0;
 }
 
 int
