@@ -70,18 +70,28 @@ io_out
   PORTB |= _BV(PINB7);  // Address phase
   PORTB &= ~_BV(PINB0);  // for WRITE access
   PORTB &= ~_BV(PINB3);  // Activate IOEXT
-  while (!is_ready());
 
-  PORTB |= _BV(PINB3);  // Inctivate IOEXT
-  while (is_ready());
+  uint32_t timeout;
+  for (timeout = 0xffff; timeout; --timeout) {
+    if (is_ready())
+      break;
+  }
+  if (is_ready()) {
+    PORTB |= _BV(PINB3);  // Inctivate IOEXT
+    while (is_ready());
 
-  PORTD = val;
-  PORTB &= ~_BV(PINB7);  // Data phase
-  PORTB &= ~_BV(PINB3);  // Activate IOEXT
-  while (!is_ready());
+    PORTD = val;
+    PORTB &= ~_BV(PINB7);  // Data phase
+    PORTB &= ~_BV(PINB3);  // Activate IOEXT
+    while (!is_ready());
 
-  PORTB |= _BV(PINB3);  // Inctivate IOEXT
-  while (is_ready());
+    PORTB |= _BV(PINB3);  // Inctivate IOEXT
+    while (is_ready());
+  } else {
+    // Revert
+    PORTB |= _BV(PINB3);
+    PORTB &= ~_BV(PINB7);
+  }
 
   PORTB |= _BV(PINB0);  // back to READ access
 }
@@ -92,21 +102,32 @@ io_in(unsigned char port)
   PORTD = port;
   PORTB |= _BV(PINB7) | _BV(PINB0);  // Address phase for READ access
   PORTB &= ~_BV(PINB3);  // Activate IOEXT
-  while (!is_ready());
 
-  PORTB |= _BV(PINB3);  // Inctivate IOEXT
-  while (is_ready());
+  uint32_t timeout;
+  for (timeout = 0xffff; timeout; --timeout) {
+    if (is_ready())
+      break;
+  }
+  unsigned char data = 0xff;
+  if (is_ready()) {
+    PORTB |= _BV(PINB3);  // Inctivate IOEXT
+    while (is_ready());
 
-  DDRD = 0;  // Set data ports as input
-  PORTD = 0;  // Disable pull-ups
-  PORTB &= ~_BV(PINB7);  // Data phase
-  PORTB &= ~_BV(PINB3);  // Activate IOEXT
-  while (!is_ready());
+    DDRD = 0;  // Set data ports as input
+    PORTD = 0xff;  // Enable pull-ups to allow opendrain devices.
+    PORTB &= ~_BV(PINB7);  // Data phase
+    PORTB &= ~_BV(PINB3);  // Activate IOEXT
+    while (!is_ready());
 
-  unsigned char data = PIND;
-  PORTB |= _BV(PINB3);  // Inctivate IOEXT
-  while (is_ready());
+    data = PIND;
+    PORTB |= _BV(PINB3);  // Inctivate IOEXT
+    while (is_ready());
+    DDRD = 0xff;  // Set back data portsas output
+  } else {
+    // Revert
+    PORTB |= _BV(PINB3);
+    PORTB &= ~_BV(PINB7);
+  }
 
-  DDRD = 0xff;  // Set back data portsas output
   return data;
 }
