@@ -208,6 +208,7 @@ int
 sdcard_fetch
 (unsigned long blk_addr)
 {
+  cur_blk = blk_addr;
   if (0 != ccs) blk_addr >>= 9; // SDHC cards use block addresses
   // cmd17
   unsigned long rc =
@@ -222,8 +223,6 @@ sdcard_fetch
   // XXX: rc check
 
   PIN_LOW(P_CK);
-
-  cur_blk = blk_addr << (ccs ? 9 : 0);
   return 0;
 }
 
@@ -245,15 +244,10 @@ sdcard_store
   if (sd_busy(0) < 0) return -3;
   rc = sd_in(4);
   if (sd_busy(~0) < 0) return -4;
-
-  // XXX: rc check
-  // 0 0101: accepted
-  // 0 1011: CRC error
-  // 0 1101: write error
-
+  if (rc != 5) return rc ? -rc : -5;
   PIN_LOW(P_CK);
 
-  return rc; // test result code
+  return 0;
 }
 
 unsigned short
