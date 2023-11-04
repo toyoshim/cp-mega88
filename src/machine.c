@@ -29,9 +29,9 @@
  * DAMAGE.
  */
 
-#if !defined(TEST)
+#if defined(__AVR__)
 # include <avr/io.h>
-#endif // !defined(TEST)
+#endif // defined(__AVR__)
 #if defined(EFI)
 # include <efi/efi.h>
 # include <efi/efilib.h>
@@ -69,10 +69,10 @@ extern EFI_HANDLE *efi_image;
 extern EFI_SYSTEM_TABLE *efi_systab;
 #endif // defined(EFI)
 
-#if !defined(TEST)
+#if defined(__AVR__)
 extern uint8_t _end;
 extern uint8_t __stack;
-#endif // defined(TEST)
+#endif // defined(__AVR__)
 
 void
 disk_read
